@@ -1,6 +1,6 @@
-﻿title: GDB 命令备忘
+title: GDB 命令备忘
 date: 2015-01-11 00:25:16
-tags: linux
+tags: [linux]
 ---
 
 一些常用的 gdb 使用命令备忘。help 可以查看命令，help xx 可以查看具体命令的所有参数。

@@ -1,6 +1,6 @@
-﻿title: Git 使用备忘
+title: Git 使用备忘
 date: 2015-01-13 20:13:16
-tags: linux
+tags: [linux]
 ---
 
 简单的 git 使用教程。

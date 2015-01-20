@@ -1,4 +1,4 @@
-﻿title: (转) float 类型在内存中的表示
+title: (转) float 类型在内存中的表示
 date: 2015-01-19 20:22:16
 tags: [basics]
 ---

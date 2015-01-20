@@ -1,6 +1,6 @@
-﻿title: ubuntu 使用问题总结
+title: ubuntu 使用问题总结
 date: 2015-01-19 09:54:16
-tags: linux
+tags: [linux]
 ---
 
 ## 激活 root 账号

@@ -1,6 +1,6 @@
-﻿title: ubuntu libtool 错误
+title: ubuntu libtool 错误
 date: 2015-01-19 10:01:16
-tags: linux
+tags: [linux]
 ---
 
 使用Ubuntu 8.04以上版本的同事在编译咱们的产品的时候可能会遇到类似如下错误：

@@ -1,6 +1,6 @@
-﻿title: ctags tag 文件错误问题
+title: ctags tag 文件错误问题
 date: 2015-01-19 10:16:16
-tags: linux
+tags: [linux]
 ---
 
 有些时候用 ctags 打出来的 tag，在 vim 里跳转用的时候，有些会报什么 tag 文件格式错误，然后跳转无效的问题。我遇到好几次了，公司的电脑，自己的电脑。今天突发奇想，打开 tag 文件看了一下，发现文件开头有这么一段：

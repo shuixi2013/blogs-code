@@ -1,4 +1,4 @@
-﻿title: (转) unlocked_ioctl 和堵塞（waitqueue）读写函数的实现
+title: (转) unlocked_ioctl 和堵塞（waitqueue）读写函数的实现
 date: 2015-01-19 10:31:16
 tags: [basics, linux]
 ---

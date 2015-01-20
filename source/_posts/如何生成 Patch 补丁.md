@@ -1,6 +1,6 @@
-﻿title: 如何生成 Patch 补丁
+title: 如何生成 Patch 补丁
 date: 2015-01-19 10:12:16
-tags: linux
+tags: [linux]
 ---
 
 一般有 2 种方式：

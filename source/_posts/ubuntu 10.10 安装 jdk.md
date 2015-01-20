@@ -1,6 +1,6 @@
-﻿title: ubuntu 10.10 安装 jdk
+title: ubuntu 10.10 安装 jdk
 date: 2015-01-19 09:59:16
-tags: linux
+tags: [linux]
 ---
 
 * 在 /etc/apt/sources.list 里新建一个源文件：

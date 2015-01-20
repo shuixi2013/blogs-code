@@ -1,6 +1,6 @@
-﻿title: ubuntu minicom 使用问题总结
+title: ubuntu minicom 使用问题总结
 date: 2015-01-19 09:57:16
-tags: linux
+tags: [linux]
 ---
 
 ## 键盘无法输入

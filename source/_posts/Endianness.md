@@ -1,4 +1,4 @@
-﻿title: Endianness
+title: Endianness
 date: 2015-01-19 20:18:16
 tags: [basics]
 ---

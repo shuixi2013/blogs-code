@@ -1,6 +1,6 @@
-﻿title: ubuntu virtual box 问题小结
+title: ubuntu virtual box 问题小结
 date: 2015-01-19 10:14:16
-tags: linux
+tags: [linux]
 ---
 
 ## usb

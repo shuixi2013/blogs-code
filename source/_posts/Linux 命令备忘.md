@@ -1,6 +1,6 @@
-﻿title: Linux 命令备忘
+title: Linux 命令备忘
 date: 2015-01-10 23:55:16
-tags: linux
+tags: [linux]
 ---
 
 百度、google都能搜得到，但是很杂。这里记录下我记不清的，但是又比较常用的一些linux命令用法。

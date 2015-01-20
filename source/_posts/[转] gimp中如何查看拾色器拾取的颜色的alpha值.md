@@ -1,6 +1,6 @@
-﻿title: (转) gimp中如何查看拾色器拾取的颜色的alpha值
+title: (转) gimp中如何查看拾色器拾取的颜色的alpha值
 date: 2015-01-19 10:18:16
-tags: linux
+tags: [linux]
 ---
 
 其实非常简单，按住shift然后点击颜色拾取，就会弹出一个小窗口告诉你所拾取的颜色的包括alpha的各种信息。还可以查看hsv信息或者cmyk信息

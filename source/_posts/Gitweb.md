@@ -1,6 +1,6 @@
-﻿title: Gitweb
+title: Gitweb
 date: 2015-01-13 20:48:16
-tags: linux
+tags: [linux]
 ---
 
 Git web 是一个可以在 web 上查看 git 仓库的程序。例如可以在 web 上查看所有的 git 分支， git 的 commit、diff 等。

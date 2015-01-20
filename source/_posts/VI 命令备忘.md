@@ -1,6 +1,6 @@
-﻿title: VI 命令备忘
+title: VI 命令备忘
 date: 2015-01-11 00:12:16
-tags: linux
+tags: [linux]
 ---
 
 我的一些常用的 vi 使用命令备忘。

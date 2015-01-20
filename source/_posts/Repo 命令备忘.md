@@ -1,6 +1,6 @@
-﻿title: Repo 命令备忘
+title: Repo 命令备忘
 date: 2015-01-13 20:37:16
-tags: linux
+tags: [linux]
 ---
 
 repo 其实本身就是一个 git 仓库，只不过这个仓库记录了别的 git 仓库的地址，版本号信息而已。这个 git 仓库在项目的根目录的 .repo/mainfests 下面。其实就是一个 xml 文件，然后里面记录了各个项目的版本号而已，repo 自身是一个脚本。
