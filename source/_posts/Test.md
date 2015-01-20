@@ -13,6 +13,8 @@ Welcome to [Hexo](http://hexo.io/)! This is your very first post. Check [documen
 $ hexo new "My New Post"
 ```
 
+This is a blod text: **Ha Ha 粗体字体**
+
 More info: [Writing](http://hexo.io/docs/writing.html)
 
 ### Run server
