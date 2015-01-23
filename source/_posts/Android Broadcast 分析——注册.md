@@ -141,7 +141,7 @@ oneway interface IIntentReceiver {
 ```java
     static final class ReceiverDispatcher {
         
-        // 这里是 Bn 端啦，注册的进程运行处理函数
+        // 这里是 Bn 端啦，注册的进程运行处理函数（Bp 端的实现 aidl 自动生成鸟）
         final static class InnerReceiver extends IIntentReceiver.Stub {
             final WeakReference<LoadedApk.ReceiverDispatcher> mDispatcher;
             final LoadedApk.ReceiverDispatcher mStrongRef;
@@ -340,6 +340,7 @@ oneway interface IIntentReceiver {
                     rl.app.receivers.add(rl);
                 } else {
                     try {
+                        // 这里注册了这个 recevier 的死亡通知函数（后面会知道这个注册的用处的）
                         receiver.asBinder().linkToDeath(rl, 0);
                     } catch (RemoteException e) {
                         return sticky;
@@ -395,11 +396,246 @@ oneway interface IIntentReceiver {
     }
 ```
 
-一开始先获取注册调用者的进程记录（ProcessRecord，这个东西在 Binder 篇有说过，这里不多说）。然后广播有个 sticky 的功能，我们先不管这些花哨功能先。后面出现了一个 ReceiverList 的对象，我们来看看：
+我们先说说参数，IIntentReceiver 是支持 Binder 的，传过来的是 Bp，IntentFilter 实现了 Parcelable 接口，也能 IPC 传过来。然后我们再开始说代码，一开始先获取注册调用者的进程记录（ProcessRecord，这个东西在 Binder 篇有说过，这里不多说）。然后广播有个 sticky 的功能，我们先不管这些花哨功能先。后面出现了一个 ReceiverList 的对象，我们来看看：
 
 ```java
+/**
+ * A receiver object that has registered for one or more broadcasts.
+ * The ArrayList holds BroadcastFilter objects.
+ */
+class ReceiverList extends ArrayList<BroadcastFilter>
+        implements IBinder.DeathRecipient {
+    final ActivityManagerService owner;
+    public final IIntentReceiver receiver;
+    public final ProcessRecord app;
+    public final int pid;
+    public final int uid;
+    public final int userId;
+    BroadcastRecord curBroadcast = null;
+    boolean linkedToDeath = false;
 
+    String stringName;
+        
+    ReceiverList(ActivityManagerService _owner, ProcessRecord _app,
+            int _pid, int _uid, int _userId, IIntentReceiver _receiver) {
+        owner = _owner;
+        receiver = _receiver;
+        app = _app;
+        pid = _pid;
+        uid = _uid;
+        userId = _userId;
+    } 
+
+... ...
+
+}
 ```
+
+这个是自己改造的一个 ArrayList，里面存放的是 BroadcastFilter，然后注意它保存了 IIntentReceiver（从 AMS 注册接口调用者那里得到）。然后上面的代码后面马上就构造出了一个 BroadcastFilter，添加到这个 ReceiverList 中去了。这个 BroadcastFilter 我们也来稍微看下它的结构吧：
+
+```java
+class BroadcastFilter extends IntentFilter {
+    // Back-pointer to the list this filter is in.
+    final ReceiverList receiverList;
+    final String packageName;
+    final String requiredPermission;
+    final int owningUid;
+    final int owningUserId;
+
+    BroadcastFilter(IntentFilter _filter, ReceiverList _receiverList,
+            String _packageName, String _requiredPermission, int _owningUid, int _userId) {
+        super(_filter);
+        receiverList = _receiverList;
+        packageName = _packageName;
+        requiredPermission = _requiredPermission;
+        owningUid = _owningUid;
+        owningUserId = _userId;
+    }
+
+... ...
+
+}
+```
+
+继续自 IntentFilter（这个我就不多说了，注册广播的应该对这个很熟悉了）。上面代码 AMS 中还保存了已经注册过的 RecieverList(mRegisteredReceivers)，会先去以前的列表里面去找，看之前是不是注册过，这个可以防止多个重复的 broadcast recevier。然后到最后了， mReceiverResolver.addFilter(bf); 这里就很关键了。我们先来看看这个 mReceiverResolver 是什么东西：
+
+```java
+//
+// ================= ActivityManagerService.java ========================
+
+    /**
+     * Resolver for broadcast intents to registered receivers.
+     * Holds BroadcastFilter (subclass of IntentFilter).
+     */
+    final IntentResolver<BroadcastFilter, BroadcastFilter> mReceiverResolver
+            = new IntentResolver<BroadcastFilter, BroadcastFilter>() {
+        ... ...    
+    };
+
+
+// ================= IntentResolver.java ========================
+
+/**
+ * {@hide}
+ */
+public abstract class IntentResolver<F extends IntentFilter, R extends Object> {
+    final private static String TAG = "IntentResolver";
+    final private static boolean DEBUG = false;
+    final private static boolean localLOGV = DEBUG || false;
+    final private static boolean VALIDATE = false;
+
+... ...
+
+    // 存数据的都在这里，基本不是 HashMap 就是 HashSet
+    // 注释也写得很清楚是拿来存什么的
+    /**
+     * All filters that have been registered.
+     */
+    private final HashSet<F> mFilters = new HashSet<F>();
+
+    /**
+     * All of the MIME types that have been registered, such as "image/jpeg",
+     * "image/*", or "{@literal *}/*".
+     */
+    private final HashMap<String, F[]> mTypeToFilter = new HashMap<String, F[]>();
+
+    /**
+     * The base names of all of all fully qualified MIME types that have been
+     * registered, such as "image" or "*".  Wild card MIME types such as
+     * "image/*" will not be here.
+     */
+    private final HashMap<String, F[]> mBaseTypeToFilter = new HashMap<String, F[]>();
+
+    /**
+     * The base names of all of the MIME types with a sub-type wildcard that
+     * have been registered.  For example, a filter with "image/*" will be
+     * included here as "image" but one with "image/jpeg" will not be
+     * included here.  This also includes the "*" for the "{@literal *}/*"
+     * MIME type.
+     */
+    private final HashMap<String, F[]> mWildTypeToFilter = new HashMap<String, F[]>();
+
+    /**
+     * All of the URI schemes (such as http) that have been registered.
+     */
+    private final HashMap<String, F[]> mSchemeToFilter = new HashMap<String, F[]>();
+
+    /**
+     * All of the actions that have been registered, but only those that did
+     * not specify data.
+     */
+    private final HashMap<String, F[]> mActionToFilter = new HashMap<String, F[]>();
+
+    /**
+     * All of the actions that have been registered and specified a MIME type.
+     */
+    private final HashMap<String, F[]> mTypedActionToFilter = new HashMap<String, F[]>();
+}
+```
+
+mReceiverResolver 继承自 IntentResolver 这个模板类。前面的 **F** 是传入类型，保存在列表（HashMap、HashSet）里面的，后面那个 **R** 是传出类型，后面 AMS 处理广播的时候要向 IntentResolver 查询的，那个时候返回的就是 R。然后2个模板都是 BroadcastFilter。我们先继续看它的 addFilter 里面是怎么处理的（在父类里面）：
+
+```java
+public abstract class IntentResolver<F extends IntentFilter, R extends Object> {
+
+    public void addFilter(F f) {
+        if (localLOGV) {
+            Slog.v(TAG, "Adding filter: " + f);
+            f.dump(new LogPrinter(Log.VERBOSE, TAG, Log.LOG_ID_SYSTEM), "      ");
+            Slog.v(TAG, "    Building Lookup Maps:");
+        }
+
+        // 先保存到 mFilters 里面，这个相当于是所有总类型的
+        mFilters.add(f);
+        // 然后下面的是保 Scheme 的，IntentFilter 不是可以设置 Scheme 么
+        int numS = register_intent_filter(f, f.schemesIterator(),
+                mSchemeToFilter, "      Scheme: ");
+        // 保存 Mime type 类型的，IntentFilter 也可以设置 Mime type
+        int numT = register_mime_types(f, "      Type: ");
+        if (numS == 0 && numT == 0) {
+            // 如果 IntentFiler 既没有设置 Scheme 也没有设置 Mime type 就保存 Action
+            // IntentFiler 感觉还是 Action 用得多吧
+            register_intent_filter(f, f.actionsIterator(),
+                    mActionToFilter, "      Action: ");
+        }
+        if (numT != 0) {
+            // 这个和上面的区别在于指定了 Action 的同时还指定了 Mime type
+            register_intent_filter(f, f.actionsIterator(),
+                    mTypedActionToFilter, "      TypedAction: ");
+        }
+
+        // 下面的不用管，是兼容以前版本的格式的，VAILIDATE 设置为 false 的
+        if (VALIDATE) {
+            mOldResolver.addFilter(f);
+            verifyDataStructures(f);
+        }
+    }
+
+}
+```
+
+这个 addFilter 大意就是把传过来的 F（这里是 BroadcastFilter）保存到对应的列表里面。不过我们还是继续去看看 register_intent_filter 里面的处理：
+
+```java
+    private final int register_intent_filter(F filter, Iterator<String> i,
+            HashMap<String, F[]> dest, String prefix) {
+        if (i == null) {
+            return 0;
+        }
+
+        int num = 0;
+        // 我们这里以 Action 为例，循环取出看看注册的 IntentFiler 里面包含多少个 Action
+        while (i.hasNext()) {
+            String name = i.next();        
+            num++;
+            if (localLOGV) Slog.v(TAG, prefix + name);
+            // 这个 addFilter 是私有的，并且参数个数和上面的不一样
+            addFilter(dest, name, filter); 
+        }
+        return num;
+    }
+
+    private final void addFilter(HashMap<String, F[]> map, String name, F filter) {
+        // 这个函数比较简单，就是把上面取到的 Action 和 传入的 filter 存到上面给定的 HashMap（HashSet） 中
+        F[] array = map.get(name);
+        if (array == null) {
+            array = newArray(2);
+            map.put(name,  array);
+            array[0] = filter;
+        } else {
+            final int N = array.length;
+            int i = N;
+            while (i > 0 && array[i-1] == null) {
+                i--;
+            }
+            if (i < N) {
+                array[i] = filter;
+            } else {
+                F[] newa = newArray((N*3)/2);
+                System.arraycopy(array, 0, newa, 0, N);
+                newa[N] = filter;
+                map.put(name, newa);
+            }
+        }
+    }
+``` 
+
+处理比较简单，就是存下数据，不过注意这里 new 数据的时候函数 newArray， AMS 中的 mReceiverResolver 实现了这个函数（其实还实现了好个，这里先看这个）：
+
+```java
+        @Override
+        protected BroadcastFilter[] newArray(int size) {
+            return new BroadcastFilter[size];
+        }
+```
+
+也挺简单的，就是返回具体模板的对象的数组而已。到这里动态注册的服务端的流程就完了。简单来说就是把传过来的接收处理对象（IItnentRecevier）和要接收的广播（IntentFilter）保存到了 AMS 的一个叫 mReceiverResolver 里面去了。但是由于对象层层封装，容易一下子看多了忘记这个倒数是啥东西了。于是我整了一张，看一下应该就会好了：
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/Broadcast-register/AMS-registerReceiver.png "AMS registerReceiver 数据流程")
+
+## 静态注册
+
+
 
 未完待续 ... ...
 
