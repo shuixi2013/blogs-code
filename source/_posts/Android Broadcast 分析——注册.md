@@ -12,38 +12,25 @@ tags: [android]
 android 广播的注册方式分为2种：一种是动态注册，一种是静态注册。哦，对了，在说之前，照例把相关源码位置啰嗦一下（4.2.2）：
 
 ```bash
-# MemroyFile 是 ashmem java 层接口
-frameworks/base/core/java/os/Parcel.java
-frameworks/base/core/java/os/Parcelable.java
-frameworks/base/core/java/os/ParcelFileDescriptor.java
-frameworks/base/core/java/os/MemoryFile.java
+# Content 广播相关的代码
+frameworks/base/core/java/android/app/ContextImpl.java
 
-# jni 相关
-frameworks/base/core/jni/android_os_Parcel.h
-frameworks/base/core/jni/android_os_MemoryFile.cpp
-frameworks/base/core/jni/android_os_Parcel.cpp
-libnativehelper/JNIHelp.cpp
+frameworks/base/core/java/android/content/Intent.java
+frameworks/base/core/java/android/content/IntentFilter.java
+frameworks/base/core/java/android/content/BroadcastReceiver.java
+frameworks/base/core/java/android/content/IIntentReceiver.aidl
 
-# 封装了 ashmem 驱动的 c 接口
-system/core/include/cutils/ashmem.h
-system/core/libcutils/ashmem-dev.c
+# 广播解析相关代码
+frameworks/base/services/java/com/android/server/IntentResolver.java
 
-# MemoryXx 是 ashmem 的 native 接口
-frameworks/native/include/binder/Parcel.h
-frameworks/native/include/binder/IMemory.h
-frameworks/native/include/binder/MemoryHeapBase.h
-frameworks/native/include/binder/MemoryBase.h
-frameworks/native/libs/binder/Parcel.cpp
-frameworks/native/libs/binder/Memory.cpp
-frameworks/native/libs/binder/MemoryHeapBase.cpp
-frameworks/native/libs/binder/MemoryBase.cpp
+# AM 广播相关代码
+frameworks/base/services/java/com/android/server/am/ActivityManagerService.java
+frameworks/base/services/java/com/android/server/am/RecevierList.java
+frameworks/base/services/java/com/android/server/am/BroadcastFilter.java
 
-# kernel binder 驱动
-kernel/drivers/staging/android/binder.h
-kernel/drivers/staging/android/binder.c
-# kernel ashmem 驱动
-kernel/include/linux/ashmem.h
-kernel/mm/ashmem.c
+# PM 广播相关代码
+frameworks/base/services/java/com/android/server/pm/PackageManagerService.java
+frameworks/base/services/java/com/android/server/pm/BroadcastFilter.java
 ```
 
 ## 动态注册
@@ -635,9 +622,393 @@ public abstract class IntentResolver<F extends IntentFilter, R extends Object> {
 
 ## 静态注册
 
+上面说完了动态注册，我们来说下静态注册。和动态相对的，静态注册最大的特点就是： **进程不需要运行，并且 AMS 在处理广播的时候还会帮你把接收器所在的进程启动起来**。静态注册在 AndroidMainfest.xml 中声明一个 recevier 就可以了，例如像下面这样：
 
+```html
+        <receiver android:name=".service.AlarmInitReceiver">
+            <intent-filter android:priority="90">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+```
 
-未完待续 ... ...
+那静态广播是怎么注册到系统里面的去咧。其实看到在 mainfest 声明就应该猜到是 PMS 扫描，然后将扫描结果存了起来。实际就是这样的，我们来看看具体流程。首先在 PMS 的构造函数有这么一个调用（PMS 会在 SystemService 初始化的时候启动起来，具体的去看 Binder 多线程篇）：
 
+```java
+    public PackageManagerService(Context context, Installer installer,
+            boolean factoryTest, boolean onlyCore) {
+... ...
+
+        // SS 业务函数多线程支持照例加锁（话说这里还加了2把）
+        synchronized (mInstallLock) {
+        // writer
+        synchronized (mPackages) {
+            mHandlerThread.start();
+            mHandler = new PackageHandler(mHandlerThread.getLooper());
+
+            // 设置一些路径
+            File dataDir = Environment.getDataDirectory();
+            mAppDataDir = new File(dataDir, "data");
+            mAppInstallDir = new File(dataDir, "app");
+            mAppLibInstallDir = new File(dataDir, "app-lib");
+            mAsecInternalPath = new File(dataDir, "app-asec").getPath();
+            mUserAppDataDir = new File(dataDir, "user");
+            mDrmAppPrivateInstallDir = new File(dataDir, "app-private");
+
+... ...
+
+            // framework 的路径是 /system/framework
+            mFrameworkDir = new File(Environment.getRootDirectory(), "framework");
+            mDalvikCacheDir = new File(dataDir, "dalvik-cache");
+
+... ...
+
+            // Find base frameworks (resource packages without code).
+            mFrameworkInstallObserver = new AppDirObserver(
+                mFrameworkDir.getPath(), OBSERVER_EVENTS, true);
+            mFrameworkInstallObserver.startWatching();
+            scanDirLI(mFrameworkDir, PackageParser.PARSE_IS_SYSTEM
+                    | PackageParser.PARSE_IS_SYSTEM_DIR,
+                    scanMode | SCAN_NO_DEX, 0);
+
+            // 系统应用的路径是 /system/app
+            // Collect all system packages.
+            mSystemAppDir = new File(Environment.getRootDirectory(), "app");
+            mSystemInstallObserver = new AppDirObserver(
+                mSystemAppDir.getPath(), OBSERVER_EVENTS, true);
+            mSystemInstallObserver.startWatching();
+            // 扫描系统应用
+            scanDirLI(mSystemAppDir, PackageParser.PARSE_IS_SYSTEM
+                    | PackageParser.PARSE_IS_SYSTEM_DIR, scanMode, 0);
+
+            // /vendor/app 下面应该是留给 OEM 厂商定制的 app
+            // 不过一些 OEM 厂商不买 google 账，自己乱放（例如步步高）
+            // Collect all vendor packages.
+            mVendorAppDir = new File("/vendor/app");
+            mVendorInstallObserver = new AppDirObserver(
+                mVendorAppDir.getPath(), OBSERVER_EVENTS, true);
+            mVendorInstallObserver.startWatching();
+            // 扫描 OEM 定制应用
+            scanDirLI(mVendorAppDir, PackageParser.PARSE_IS_SYSTEM
+                    | PackageParser.PARSE_IS_SYSTEM_DIR, scanMode, 0);
+
+... ...
+
+            // 这个 onlyCore 是运行在加密的设备上（"vold.decrypt" 被设置为 true）才是 true，
+            // 一般的是 false
+            if (!mOnlyCore) {
+                EventLog.writeEvent(EventLogTags.BOOT_PROGRESS_PMS_DATA_SCAN_START,
+                        SystemClock.uptimeMillis());
+                mAppInstallObserver = new AppDirObserver(
+                    mAppInstallDir.getPath(), OBSERVER_EVENTS, false);
+                mAppInstallObserver.startWatching();
+                // 这个路径前面设置过了是 /data/data，这里扫描普通应用
+                scanDirLI(mAppInstallDir, 0, scanMode, 0);
+
+                // 这里是扫描受 DRM 保护的应用
+                mDrmAppInstallObserver = new AppDirObserver(
+                    mDrmAppPrivateInstallDir.getPath(), OBSERVER_EVENTS, false);
+                mDrmAppInstallObserver.startWatching();
+                scanDirLI(mDrmAppPrivateInstallDir, PackageParser.PARSE_FORWARD_LOCK,
+                        scanMode, 0);
+
+... ...
+
+            } else {
+                mAppInstallObserver = null;
+                mDrmAppInstallObserver = null;
+            }
+
+... ...
+
+        } // synchronized (mPackages)
+        } // synchronized (mInstallLock)
+    }
+```
+
+SS（PMS） 是开机启动的，也就是说在开机的时候 PMS 会去扫描一系列目录下的应用去收集一些应用的信息（稍微扯远点，注意看上面有一些文件 Observer（这个是 android 自己弄了一个监视文件变动的 Observer）设置，会在监视相应目录下的文件变动，一有变动，PMS 会扫描变动，这也就是为什么调试的时候直接 push apk 到 /system/app 或者 /data/app 下面也是能够正常安装的原因）。扫描函数是 scanDirLI：
+
+```java
+    // 这个是扫描目录的
+    private void scanDirLI(File dir, int flags, int scanMode, long currentTime) {
+        String[] files = dir.list();
+        if (files == null) {
+            Log.d(TAG, "No files in app dir " + dir);
+            return;
+        }   
+            
+        if (DEBUG_PACKAGE_SCANNING) {
+            Log.d(TAG, "Scanning app dir " + dir);
+        }   
+            
+        // 这个写法，不支持递归目录咧（也不需要支持）
+        int i;
+        for (i=0; i<files.length; i++) {
+            File file = new File(dir, files[i]);
+            // 稍微判断下是不是 apk 文件（这里我们就不去看这个判断了）
+            if (!isPackageFilename(files[i])) {
+                // Ignore entries which are not apk's
+                continue;
+            }
+            // 罗列下指定目录下的 apk 文件，然后交给扫描文件的函数处理
+            PackageParser.Package pkg = scanPackageLI(file,
+                    flags|PackageParser.PARSE_MUST_BE_APK, scanMode, currentTime, null);
+            // Don't mess around with apps in system partition.
+            if (pkg == null && (flags & PackageParser.PARSE_IS_SYSTEM) == 0 &&
+                    mLastScanError == PackageManager.INSTALL_FAILED_INVALID_APK) {
+                // Delete the apk
+                Slog.w(TAG, "Cleaning up failed install of " + file);
+                file.delete();
+            }
+        }   
+    } 
+```
+
+这里把扫描单个 apk 文件的任务交给 scanPackageLI 这个函数了：
+
+```java
+    /*
+     *  Scan a package and return the newly parsed package.
+     *  Returns null in case of errors and the error code is stored in mLastScanError
+     */
+    private PackageParser.Package scanPackageLI(File scanFile,
+            int parseFlags, int scanMode, long currentTime, UserHandle user) {
+        mLastScanError = PackageManager.INSTALL_SUCCEEDED;
+        String scanPath = scanFile.getPath();
+        parseFlags |= mDefParseFlags;
+        PackageParser pp = new PackageParser(scanPath);
+        pp.setSeparateProcesses(mSeparateProcesses);
+        pp.setOnlyCoreApps(mOnlyCore);
+        // PMS 中有一个专门解析 apk 文件的东西（PackageParser），里面包括了很多文件的解析
+        // 这里我们不去过多分析这个，以后有空再单独开一篇分析咯，这里就当它解析好了就行了
+        final PackageParser.Package pkg = pp.parsePackage(scanFile,
+                scanPath, mMetrics, parseFlags);
+        if (pkg == null) {
+            mLastScanError = pp.getParseError();
+            return null; 
+        }
+
+... ...
+
+        String codePath = null; 
+        String resPath = null; 
+        if ((parseFlags & PackageParser.PARSE_FORWARD_LOCK) != 0) {
+            if (ps != null && ps.resourcePathString != null) {
+                resPath = ps.resourcePathString;
+            } else {
+                // Should not happen at all. Just log an error.
+                Slog.e(TAG, "Resource path not set for pkg : " + pkg.packageName);
+            }     
+        } else {
+            resPath = pkg.mScanPath;
+        }     
+        codePath = pkg.mScanPath;
+        // Set application objects path explicitly.
+        setApplicationInfoPaths(pkg, codePath, resPath);
+        // 这里又调用另外一个同名不同参数的函数去处理了
+        // Note that we invoke the following method only if we are about to unpack an application
+        PackageParser.Package scannedPkg = scanPackageLI(pkg, parseFlags, scanMode
+                | SCAN_UPDATE_SIGNATURE, currentTime, user);
+
+... ...
+
+        return scannedPkg;
+    }
+```
+
+又调用到同名，不同参数的函数中去了，而且这个函数巨长无比，有将近 1000 行，我们只看关键部分：
+
+```java
+    private PackageParser.Package scanPackageLI(PackageParser.Package pkg,
+            int parseFlags, int scanMode, long currentTime, UserHandle user) {
+        File scanFile = new File(pkg.mScanPath);
+        if (scanFile == null || pkg.applicationInfo.sourceDir == null ||
+                pkg.applicationInfo.publicSourceDir == null) {
+            // Bail out. The resource and code paths haven't been set.
+            Slog.w(TAG, " Code and resource paths haven't been set correctly");
+            mLastScanError = PackageManager.INSTALL_FAILED_INVALID_APK;
+            return null;
+        }   
+        mScanningPath = scanFile;
+
+... ...
+
+        // writer
+        synchronized (mPackages) {
+            // We don't expect installation to fail beyond this point,
+            if ((scanMode&SCAN_MONITOR) != 0) {
+                mAppDirs.put(pkg.mPath, pkg);
+            }
+
+... ...
+
+            // 取 PackageParser 解析 manifest 中有声明了的 receiver 
+            N = pkg.receivers.size();
+            r = null;
+            for (i=0; i<N; i++) {
+                PackageParser.Activity a = pkg.receivers.get(i);
+                a.info.processName = fixProcessName(pkg.applicationInfo.processName,
+                        a.info.processName, pkg.applicationInfo.uid);
+                // 这个 addActivity 是关键步骤了
+                mReceivers.addActivity(a, "receiver");
+                if ((parseFlags&PackageParser.PARSE_CHATTY) != 0) {
+                    if (r == null) {
+                        r = new StringBuilder(256);
+                    } else {
+                        r.append(' ');
+                    }         
+                    r.append(a.info.name);
+                }                 
+            }                 
+            if (r != null) {
+                if (DEBUG_PACKAGE_SCANNING) Log.d(TAG, "  Receivers: " + r);
+            }
+
+... ...
+            
+        }         
+                
+        return pkg;
+    }
+```
+
+我们先来看这个 mReceivers 是什么：
+
+```java
+    // All available receivers, for your resolving pleasure.
+    final ActivityIntentResolver mReceivers =
+            new ActivityIntentResolver();
+
+... ...
+
+    private final class ActivityIntentResolver
+            extends IntentResolver<PackageParser.ActivityIntentInfo, ResolveInfo> {
+        ... ...
+    }
+```
+
+经过前面动态注册的分析，对于个 IntentResolver 模板类应该不陌生了吧。PMS 中也有一个，用来来保存静态的注册信息的（AMS 那个是保存动态的）。PMS 里面的 F 是 PackageParser.ActivityIntentInfo， R 是 ResolverInfo。我们来看下这个 F 的定义：
+
+```java
+    public static class IntentInfo extends IntentFilter {
+        public boolean hasDefault;
+        public int labelRes;
+        public CharSequence nonLocalizedLabel;
+        public int icon;
+        public int logo;
+    }
+
+    public final static class ActivityIntentInfo extends IntentInfo {
+        public final Activity activity;
+
+        public ActivityIntentInfo(Activity _activity) {
+            activity = _activity;
+        }    
+
+        public String toString() {
+            return "ActivityIntentInfo{"
+                + Integer.toHexString(System.identityHashCode(this))
+                + " " + activity.info.name + "}"; 
+        }    
+    }
+```
+
+还是得继承自 IntentFilter，只不过又多了一层，然后多了几个变量而已。然后 scanPackageLI 这个函数是传入 PackageParser.Activity 这个对象过去的，我们看看这个东西：
+
+```java
+    public static class Component<II extends IntentInfo> {
+        public final Package owner;    
+        public final ArrayList<II> intents;
+        public final String className; 
+        public Bundle metaData;        
+
+        ComponentName componentName;   
+        String componentShortName;  
+... ...
+        
+    }
+
+... ...
+
+    public final static class Activity extends Component<ActivityIntentInfo> {
+        public final ActivityInfo info;
+            
+        public Activity(final ParseComponentArgs args, final ActivityInfo _info) {
+            super(args, _info);
+            info = _info; 
+            info.applicationInfo = args.owner.applicationInfo;
+        }       
+            
+        public void setPackageName(String packageName) {
+            super.setPackageName(packageName);
+            info.packageName = packageName;
+        }
+
+        public String toString() {
+            return "Activity{"
+                + Integer.toHexString(System.identityHashCode(this))
+                + " " + getComponentShortName() + "}";
+        }
+    }
+```
+
+绕了几下，反正是 ActivityIntentInfo 的子类。至于 ActivityIntentInfo 怎么从 PackageParser 解析出来的，前面说了我们这里不做分析。然后我们直接去看 ActivityIntentResolver 的 addActivity：
+
+```java
+        // type 前面传入的是 "receiver"
+        public final void addActivity(PackageParser.Activity a, String type) {   
+            final boolean systemApp = isSystemApp(a.info.applicationInfo);
+            mActivities.put(a.getComponentName(), a);
+            if (DEBUG_SHOW_INFO)
+                Log.v(
+                TAG, "  " + type + " " +
+                (a.info.nonLocalizedLabel != null ? a.info.nonLocalizedLabel : a.info.name) + ":");
+            if (DEBUG_SHOW_INFO)
+                Log.v(TAG, "    Class=" + a.info.name);
+            // 前面 Activity 的父类的父类 Component 中有一个 ArrayList 保存了系列 ActivityIntentInfo
+            // 然后就是 mainfest 里面声明了多少个 <intent-filer> 的标签，这里就有几个 ActivityIntentInfo
+            final int NI = a.intents.size();
+            for (int j=0; j<NI; j++) {
+                PackageParser.ActivityIntentInfo intent = a.intents.get(j);
+                // 这里有个优先级权限判断，如果不是系统应用，或者 type 类型是 activity（这里是 recevier）
+                // 优先级设置大于 0 的话，强制变成0
+                // 换句话说，只有系统应用能把 receiver 的优先级设置成大于 0
+                if (!systemApp && intent.getPriority() > 0 && "activity".equals(type)) {
+                    intent.setPriority(0); 
+                    Log.w(TAG, "Package " + a.info.applicationInfo.packageName + " has activity "
+                            + a.className + " with priority > 0, forcing to 0");
+                }  
+                if (DEBUG_SHOW_INFO) {
+                    Log.v(TAG, "    IntentFilter:");
+                    intent.dump(new LogPrinter(Log.VERBOSE, TAG), "      ");
+                }   
+                if (!intent.debugCheck()) {
+                    Log.w(TAG, "==> For Activity " + a.info.name);
+                }
+                // 调用父类 IntentResolver 的 addFilter 添加 IntentFilter 
+                addFilter(intent);
+            }
+        }
+```
+
+这里有个解决前面背景中关机闹钟不响问题的关键——广播 receiver 接收优先级的设置。在 mainfest 的 intent-filter 标签中可以声明一个优先级（看我前面的那个例子），这个是一个 int 类型，一般默认是 0。数值越大，优先级越高，这个优先级在哪里会用到，到后面一篇，广播处理那里就能看到了。这个数值是由 PackageParser 解析 mainfest 中的声明得到的，从这里的判断可以看出，普通应用的广播 receiver 无法声明高于 0。但是这点好像只对静态注册的广播有限制，动态的可以使用 IntentFilter.setPriority 设置，虽然 API 文档里告诉你不要让这个值高于 `SYSTEM_HIGH_PRIORITY(1000)` ，但是 AMS 里面没有任何限制判断，所以你要耍下流氓可以把这个值设得很高。不过动态注册的 recevier 在并行广播处理（后面那篇处理的会解释什么叫并行广播、什么叫串行广播）中和静态的 receiver 的优先级有本质的区别（后面能知道本质区别在哪），所以动态的流氓点好像关系也不大。
+
+扯了下优先级的问题。最后还是调用父类 IntentResolver 的 addFilter 保存到列表中，然后 PMS 的 ActivityIntentResolver 的 newArray 是这样的：
+
+```java
+        @Override
+        protected ActivityIntentInfo[] newArray(int size) {
+            return new ActivityIntentInfo[size];
+        }
+```
+
+这个 addFilter 就不重复说一遍了。
+
+## 总结
+
+通过上面的分析，可以看到，虽然广播接收器注册分动态和静态。但是最后的流程都是一样的，**只不过一个接收器的数据保存在 AMS 中（动态的）**，**一个接收器的数据保存在 PMS 中（静态的）**。所以后面处理广播的时候查询动态的接收器直接用 AMS 自己的数据查，而查询静态的需要调用 PMS 的接口去查（不过它们2个都在一个进程里面，也算一家人啦）。
 
 
