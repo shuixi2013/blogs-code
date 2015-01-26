@@ -1,5 +1,6 @@
 title: Android Gesture 使用简介
 date: 2015-01-25 23:03:16
+categories: [Android Development]
 tags: [android]
 ---
 

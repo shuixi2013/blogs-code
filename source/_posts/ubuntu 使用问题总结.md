@@ -1,5 +1,6 @@
 title: ubuntu 使用问题总结
 date: 2015-01-19 09:54:16
+categories: [Linux]
 tags: [linux]
 ---
 

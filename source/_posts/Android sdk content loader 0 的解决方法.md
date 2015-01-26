@@ -1,5 +1,6 @@
 title: Android sdk content loader 0 的解决方法
 date: 2015-01-25 22:43:16
+categories: [Android Development]
 tags: [android]
 ---
 

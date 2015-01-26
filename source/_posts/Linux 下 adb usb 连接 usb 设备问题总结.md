@@ -1,6 +1,7 @@
 title: Linux 下 adb usb 连接 usb 设备问题总结
 date: 2015-01-25 22:39:16
-tags: [android]
+categories: [Android Development]
+tags: [android, linux]
 ---
 
 在 linux 上一般刚开始用 usb 数据线 adb 连接 android 设备会出现 "???????????? no permissions" 的提示。这个是因为要使用 usb 来调试需要 root 权限，使用一下的方法将使用 root 权限来使用 usb 设备。

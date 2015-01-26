@@ -1,5 +1,6 @@
 title: MiniGUI 源码分析笔记
 date: 2015-01-21 21:12:16
+categories: [MiniGUI]
 tags: [minigui]
 ---
 

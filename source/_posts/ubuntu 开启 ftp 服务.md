@@ -1,5 +1,6 @@
 title: ubuntu 开启 ftp 服务
 date: 2015-01-19 10:03:16
+categories: [Linux]
 tags: [linux]
 ---
 

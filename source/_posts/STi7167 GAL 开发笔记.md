@@ -1,5 +1,6 @@
 title: STi7167 GAL 开发笔记
 date: 2015-01-21 21:25:16
+categories: [MiniGUI]
 tags: [minigui]
 ---
 

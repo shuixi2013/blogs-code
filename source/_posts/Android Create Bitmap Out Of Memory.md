@@ -1,5 +1,6 @@
 title: Android Create Bitmap Out Of Memory
 date: 2015-01-25 23:25:16
+categories: [Android Development]
 tags: [android]
 ---
 

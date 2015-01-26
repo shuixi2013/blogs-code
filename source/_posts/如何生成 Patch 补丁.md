@@ -1,5 +1,6 @@
 title: 如何生成 Patch 补丁
 date: 2015-01-19 10:12:16
+categories: [Linux]
 tags: [linux]
 ---
 

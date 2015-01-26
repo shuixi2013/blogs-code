@@ -1,6 +1,7 @@
 title: BBK 工作编译脚本分析
 date: 2015-01-19 00:01:16
-tags: [linux]
+categories: [Linux]
+tags: [linux, shell]
 ---
 
 在 bbk 搞 apk 开发，通常一个人要用 N 个仓库，但是又不让 repo ，所以就搞了这个东西，还是借鉴了以前的在搞 MiniGUI 的脚本。

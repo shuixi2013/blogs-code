@@ -1,5 +1,6 @@
 title: Android 4.0 访问 WebService 出现 android.os.NetworkOnMainThreadException 异常
 date: 2015-01-25 23:30:16
+categories: [Android Development]
 tags: [android]
 ---
 

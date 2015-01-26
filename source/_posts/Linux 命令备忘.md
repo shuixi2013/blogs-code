@@ -1,5 +1,6 @@
 title: Linux 命令备忘
 date: 2015-01-10 23:55:16
+categories: [Linux]
 tags: [linux]
 ---
 

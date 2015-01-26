@@ -1,5 +1,6 @@
 title: 反编译 Android apk
 date: 2015-01-25 22:50:16
+categories: [Android Development]
 tags: [android]
 ---
 

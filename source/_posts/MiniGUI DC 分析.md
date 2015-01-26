@@ -1,5 +1,6 @@
 title: MiniGUI DC 分析
 date: 2015-01-21 21:15:16
+categories: [MiniGUI]
 tags: [minigui]
 ---
 

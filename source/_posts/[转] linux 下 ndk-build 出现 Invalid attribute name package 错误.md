@@ -1,5 +1,6 @@
 title: (转) linux 下 ndk-build 出现 Invalid attribute name package 错误
 date: 2015-01-25 22:47:16
+categories: [Android Development]
 tags: [android]
 ---
 

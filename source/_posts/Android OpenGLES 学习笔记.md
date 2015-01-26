@@ -1,6 +1,7 @@
 title: Android OpenGLES 学习笔记
 date: 2015-01-25 23:28:16
-tags: [android]
+categories: [Android Development]
+tags: [android, opengl]
 ---
 
 ## GL10

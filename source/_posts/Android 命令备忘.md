@@ -1,5 +1,6 @@
 title: Android 命令备忘
 date: 2015-01-25 22:03:16
+categories: [Android Development]
 tags: [android]
 ---
 

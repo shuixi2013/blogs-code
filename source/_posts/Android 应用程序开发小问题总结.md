@@ -1,5 +1,6 @@
 title: Android 应用程序开发小问题总结
 date: 2015-01-25 22:30:16
+categories: [Android Development]
 tags: [android]
 ---
 

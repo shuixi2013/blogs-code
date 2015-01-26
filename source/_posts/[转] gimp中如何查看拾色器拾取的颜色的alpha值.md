@@ -1,5 +1,6 @@
 title: (转) gimp中如何查看拾色器拾取的颜色的alpha值
 date: 2015-01-19 10:18:16
+categories: [Linux]
 tags: [linux]
 ---
 

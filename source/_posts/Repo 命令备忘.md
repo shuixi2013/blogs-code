@@ -1,5 +1,6 @@
 title: Repo 命令备忘
 date: 2015-01-13 20:37:16
+categories: [Linux]
 tags: [linux]
 ---
 
@@ -9,10 +10,10 @@ repo 其实本身就是一个 git 仓库，只不过这个仓库记录了别的 
  下载 repo 的地址: http://android.git.kernel.org/repo ，可以用 wget http://android.git.kernel.org/repo 或者 curl http://android.git.kernel.org/repo>~/bin/repo  来下载 repo , Repo脚本授权：chmod a+x ~/bin/repo
 
 ## repo ini
-repo init -u URL ,  在当前目录安装 repository ，会在当前目录创建一个目录 ".repo"  -u 参数指定一个URL，从这个URL 中取得repository 的 manifest 文件。  
+repo init -u URL ,  在当前目录安装 repository ，会在当前目录创建一个目录 ".repo"  -u 参数指定一个URL，从这个URL 中取得repository 的 manifest 文件。
 
 <pre>
-repo init -u git://android.git.kernel.org/platform/manifest.git  
+repo init -u git://android.git.kernel.org/platform/manifest.git
 </pre>
 
 可以用 -m 参数来选择 repository 中的某一个特定的 manifest 文件，如果不具体指定，那么表示为默认的 namifest 文件(default.xml)    repoinit -u git://android.git.kernel.org/platform/manifest.git -m dalvik-plus.xml 可以用 -b 参数来指定某个manifest 分支。

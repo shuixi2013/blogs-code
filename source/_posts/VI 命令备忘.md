@@ -1,5 +1,6 @@
 title: VI 命令备忘
 date: 2015-01-11 00:12:16
+categories: [Linux]
 tags: [linux]
 ---
 

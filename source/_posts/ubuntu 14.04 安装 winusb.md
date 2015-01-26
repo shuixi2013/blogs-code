@@ -1,6 +1,7 @@
 title: ubuntu 14.04 安装 winusb
 date: 2015-01-19 10:25:16
-tags: [linux]
+categories: [Linux]
+tags: [linux, install]
 ---
 
 今天 win8 突然蓝屏启动不了，说什么 boot File:\BCD 损坏了，我擦，搞什么飞机。只好切换到 ubuntu 下想办法制作个 win8.1 的启动盘修复一下。

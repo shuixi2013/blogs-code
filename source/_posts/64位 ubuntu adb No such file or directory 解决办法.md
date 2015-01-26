@@ -1,6 +1,7 @@
 title: 64位 ubuntu adb No such file or directory 解决办法
 date: 2015-01-25 22:42:16
-tags: [android]
+categories: [Android Development]
+tags: [android, linux]
 ---
 
 ## 13.04

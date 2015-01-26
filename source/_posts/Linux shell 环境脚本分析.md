@@ -1,6 +1,7 @@
 title: Linux shell 环境脚本分析
 date: 2015-01-13 20:50:16
-tags: [linux]
+categories: [Linux]
+tags: [linux, shell]
 ---
 
 侯哥之前帮我在编译服务器上弄了个工作环境，vim啊，调试不同的minigui版本都挺好用的。不过总想弄明白这些脚本是咋回事。在不停的提问、百度、google之下，稍微明白了点；赶紧记下来吧，免得又忘记了。
