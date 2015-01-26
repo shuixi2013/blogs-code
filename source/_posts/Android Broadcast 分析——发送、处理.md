@@ -1,5 +1,6 @@
 title: Android Broadcast 分析——发送、处理
 date: 2015-01-22 10:15:16
+categories: [Android Framework]
 tags: [android]
 ---
 
@@ -301,6 +302,357 @@ public class ResolveInfo implements Parcelable {
 ```
 
 里面的具体东西我们就不看了，看下注释，是说一个 ResolverInfo 对应一个 IntentFilter。然后就是 mReceivers 这个 ActivityIntentResolver，前一篇已经提及过了。PMS 中就是它保存了静态注册的接收器。
+
+```java
+        public List<ResolveInfo> queryIntent(Intent intent, String resolvedType, int flags,
+                int userId) {
+            if (!sUserManager.exists(userId)) return null;
+            mFlags = flags;
+            // 这个差不多就是直接调用父类的同名函数
+            return super.queryIntent(intent, resolvedType,
+                    (flags & PackageManager.MATCH_DEFAULT_ONLY) != 0, userId);
+        }
+```
+
+我们去看父类（IntentResolver）的 queryIntent：
+
+```java
+    // 前面注册篇说了么，R 是输出类型
+    public List<R> queryIntent(Intent intent, String resolvedType, boolean defaultOnly,
+            int userId) {
+        String scheme = intent.getScheme();
+
+        ArrayList<R> finalList = new ArrayList<R>();
+
+        final boolean debug = localLOGV ||
+                ((intent.getFlags() & Intent.FLAG_DEBUG_LOG_RESOLUTION) != 0);
+
+        if (debug) Slog.v(
+            TAG, "Resolving type " + resolvedType + " scheme " + scheme
+            + " of intent " + intent);
+
+        // F 是输入，这几个数组分别对应注册篇说的 IntentResovler 中的那几个保存的 HashMap（Set）
+        F[] firstTypeCut = null;
+        F[] secondTypeCut = null;
+        F[] thirdTypeCut = null;
+        F[] schemeCut = null;
+
+        // MIME type，我们的例子 BOOT_COMPLETED 是 null
+        // If the intent includes a MIME type, then we want to collect all of
+        // the filters that match that MIME type.
+        if (resolvedType != null) {
+            int slashpos = resolvedType.indexOf('/');
+            if (slashpos > 0) {
+                final String baseType = resolvedType.substring(0, slashpos);
+                if (!baseType.equals("*")) {
+                    if (resolvedType.length() != slashpos+2
+                            || resolvedType.charAt(slashpos+1) != '*') {
+                        // Not a wild card, so we can just look for all filters that
+                        // completely match or wildcards whose base type matches.
+                        firstTypeCut = mTypeToFilter.get(resolvedType);
+                        if (debug) Slog.v(TAG, "First type cut: " + firstTypeCut);
+                        secondTypeCut = mWildTypeToFilter.get(baseType);
+                        if (debug) Slog.v(TAG, "Second type cut: " + secondTypeCut);
+                    } else {
+                        // We can match anything with our base type.
+                        firstTypeCut = mBaseTypeToFilter.get(baseType);
+                        if (debug) Slog.v(TAG, "First type cut: " + firstTypeCut);
+                        secondTypeCut = mWildTypeToFilter.get(baseType);
+                        if (debug) Slog.v(TAG, "Second type cut: " + secondTypeCut);
+                    }
+                    // Any */* types always apply, but we only need to do this
+                    // if the intent type was not already */*.
+                    thirdTypeCut = mWildTypeToFilter.get("*");
+                    if (debug) Slog.v(TAG, "Third type cut: " + thirdTypeCut);
+                } else if (intent.getAction() != null) {
+                    // The intent specified any type ({@literal *}/*).  This
+                    // can be a whole heck of a lot of things, so as a first
+                    // cut let's use the action instead.
+                    firstTypeCut = mTypedActionToFilter.get(intent.getAction());
+                    if (debug) Slog.v(TAG, "Typed Action list: " + firstTypeCut);
+                }   
+            }           
+        }   
+                        
+        // Scheme，我们的例子 BOOT_COMPLETED 也是 null
+        // If the intent includes a data URI, then we want to collect all of
+        // the filters that match its scheme (we will further refine matches
+        // on the authority and path by directly matching each resulting filter).
+        if (scheme != null) {   
+            schemeCut = mSchemeToFilter.get(scheme);
+            if (debug) Slog.v(TAG, "Scheme list: " + schemeCut);
+        }
+
+        // Action，我们的例子 BOOT_COMPLETED 本身就是 Action 啦
+        // 所以这里 firstTypeCut 就是取前面注册篇中保存 Action 的列表了
+        // If the intent does not specify any data -- either a MIME type or
+        // a URI -- then we will only be looking for matches against empty
+        // data.
+        if (resolvedType == null && scheme == null && intent.getAction() != null) {
+            firstTypeCut = mActionToFilter.get(intent.getAction());
+            if (debug) Slog.v(TAG, "Action list: " + firstTypeCut);
+        }
+
+        // 这个 Categories，我们也暂时不管先
+        FastImmutableArraySet<String> categories = getFastIntentCategories(intent);
+        // 然后按照顺序依次从匹配的 F 列表中构造出要查询的 R 返回给调用者
+        if (firstTypeCut != null) {
+            buildResolveList(intent, categories, debug, defaultOnly,
+                    resolvedType, scheme, firstTypeCut, finalList, userId);
+        }
+        if (secondTypeCut != null) {
+            buildResolveList(intent, categories, debug, defaultOnly,
+                    resolvedType, scheme, secondTypeCut, finalList, userId);
+        }
+        if (thirdTypeCut != null) {
+            buildResolveList(intent, categories, debug, defaultOnly,
+                    resolvedType, scheme, thirdTypeCut, finalList, userId);
+        }
+        if (schemeCut != null) {
+            buildResolveList(intent, categories, debug, defaultOnly,
+                    resolvedType, scheme, schemeCut, finalList, userId);
+        }
+        // 对匹配的结果进行排序
+        sortResults(finalList);
+
+        // 兼容老版本的，无视 ... ...
+        if (VALIDATE) {
+            List<R> oldList = mOldResolver.queryIntent(intent, resolvedType, defaultOnly, userId);
+            if (oldList.size() != finalList.size()) {
+                ValidationFailure here = new ValidationFailure();
+                here.fillInStackTrace();
+                Log.wtf(TAG, "Query result " + intent + " size is " + finalList.size()
+                        + "; old implementation is " + oldList.size(), here);
+            }
+        }
+
+        if (debug) {
+            Slog.v(TAG, "Final result list:");
+            for (R r : finalList) {
+                Slog.v(TAG, "  " + r);
+            }
+        }
+        return finalList;
+    }
+```
+
+这个函数前面是通过传过来的 Intent 从 IntentResolver 那一堆保存注册接收器数据的列表中选出匹配的 F（PMS 中的静态注册的 F 是 PackageParser.ActivityIntentInfo），一般来说匹配条件就是注册广播中 IntentFilter 可以设置的那一堆条件了：MIME type、Scheme、Action 等等（到这里的都是隐式的，显式的前面直接给解析好了）。然后我们就得去看看 buildResolveList 这个函数是怎么构造 R 出来的：
+
+```java
+    private void buildResolveList(Intent intent, FastImmutableArraySet<String> categories,
+            boolean debug, boolean defaultOnly,
+            String resolvedType, String scheme, F[] src, List<R> dest, int userId) {
+        final String action = intent.getAction();
+        final Uri data = intent.getData();
+        final String packageName = intent.getPackage();
+
+        final boolean excludingStopped = intent.isExcludingStopped();
+
+        final int N = src != null ? src.length : 0;
+        boolean hasNonDefaults = false;
+        int i;
+        F filter;
+        // 在选出的 F 数组里，循环根据 F 构造出 R
+        for (i=0; i<N && (filter=src[i]) != null; i++) {
+            int match;
+            if (debug) Slog.v(TAG, "Matching against filter " + filter);
+
+            if (excludingStopped && isFilterStopped(filter, userId)) {
+                if (debug) {
+                    Slog.v(TAG, "  Filter's target is stopped; skipping");
+                }   
+                continue;
+            }   
+
+            // Is delivery being limited to filters owned by a particular package?
+            if (packageName != null && !packageName.equals(packageForFilter(filter))) {
+                if (debug) {
+                    Slog.v(TAG, "  Filter is not from package " + packageName + "; skipping");
+                }   
+                continue;
+            }   
+
+            // 这个 allowFilterResult 是由之类实现的，不过和我们这里的关系不大，不理它先
+            // Do we already have this one?
+            if (!allowFilterResult(filter, dest)) {
+                if (debug) {
+                    Slog.v(TAG, "  Filter's target already added");
+                }   
+                continue;
+            }   
+
+            // IntentFilter 里面的匹配函数，我们也先忽略一下（就是拿上面几种类型匹配一下而已）
+            match = filter.match(action, resolvedType, scheme, data, categories, TAG);
+            if (match >= 0) {
+                if (debug) Slog.v(TAG, "  Filter matched!  match=0x" +
+                        Integer.toHexString(match));
+                if (!defaultOnly || filter.hasCategory(Intent.CATEGORY_DEFAULT)) {
+                    // 这里 new R 出来的 newResult 也是由子类实现的，我们待会去看一下
+                    final R oneResult = newResult(filter, match, userId);
+                    if (oneResult != null) {
+                        // 把 R 添加到输出列表中
+                        dest.add(oneResult);
+                    }
+                } else {
+                    hasNonDefaults = true;
+                }
+            } else {
+                if (debug) {
+                    String reason;
+                    switch (match) {
+                        case IntentFilter.NO_MATCH_ACTION: reason = "action"; break;
+                        case IntentFilter.NO_MATCH_CATEGORY: reason = "category"; break;
+                        case IntentFilter.NO_MATCH_DATA: reason = "data"; break;
+                        case IntentFilter.NO_MATCH_TYPE: reason = "type"; break;
+                        default: reason = "unknown reason"; break;
+                    }
+                    Slog.v(TAG, "  Filter did not match: " + reason);
+                }
+            }
+        }
+
+        if (dest.size() == 0 && hasNonDefaults) {
+            Slog.w(TAG, "resolveIntent failed: found match, but none with Intent.CATEGORY_DEFAULT");
+        }
+    }
+```
+
+这个 buildResolveList 中就是循环从输入的 F 数组中取出 F，然后传给一个叫 newResult 的函数构造 R。这个 newResult 是由不同的 IntentResovler 之类实现的。我们来看看 PMS 中的 ActivityIntentResolver newResult 的实现：
+
+```java
+        @Override
+        protected ResolveInfo newResult(PackageParser.ActivityIntentInfo info,
+                int match, int userId) {       
+            // 下面一堆判断可以不用管先
+            if (!sUserManager.exists(userId)) return null;
+            if (!mSettings.isEnabledLPr(info.activity.info, mFlags, userId)) {
+                return null;
+            }
+            final PackageParser.Activity activity = info.activity;
+            if (mSafeMode && (activity.info.applicationInfo.flags
+                    &ApplicationInfo.FLAG_SYSTEM) == 0) {
+                return null;
+            }
+            PackageSetting ps = (PackageSetting) activity.owner.mExtras;
+            if (ps == null) {
+                return null;
+            }
+            ActivityInfo ai = PackageParser.generateActivityInfo(activity, mFlags,
+                    ps.readUserState(userId), userId);
+            if (ai == null) {
+                return null;
+            }
+            // 下面就是构造 R（ResolverInfo） 的过程
+            final ResolveInfo res = new ResolveInfo();
+            res.activityInfo = ai;         
+            if ((mFlags&PackageManager.GET_RESOLVED_FILTER) != 0) {
+                res.filter = info;             
+            }
+            // 接收器的优先级在这里复制的哦
+            res.priority = info.getPriority();
+            res.preferredOrder = activity.owner.mPreferredOrder;
+            //System.out.println("Result: " + res.activityInfo.className +
+            //                   " = " + res.priority);
+            res.match = match;
+            res.isDefault = info.hasDefault;
+            res.labelRes = info.labelRes;
+            res.nonLocalizedLabel = info.nonLocalizedLabel;
+            res.icon = info.icon;
+            res.system = isSystemApp(res.activityInfo.applicationInfo);
+            return res;
+        }
+```
+
+上面就是 new 了一个 ResolverInfo（R），然后用 F（PackageParser.ActivityIntentInfo） 中相应的字段填充自己的字段而已。后面 AMS 从自己那里收集动态注册的接收器，也是差不多的。所以说注册的时候保存的数据，差不多可以说就是接收器数据。
+
+#### 1.2 收集动态注册接收器
+
+上面看过收集静态的过程，下面我们来看看收集动态注册的接收器：
+
+```java
+            registeredReceivers = mReceiverResolver.queryIntent(intent,
+                    resolvedType, false, userId);
+```
+
+这个其实和上面静态流程是一样的，只不过 IntentResolver 的实现子类是 AMS 的匿名的一个类而已，我们就直接看看关键的 newResult 就行了：
+
+```java
+        @Override
+        protected BroadcastFilter newResult(BroadcastFilter filter, int match, int userId) {
+            if (userId == UserHandle.USER_ALL || filter.owningUserId == UserHandle.USER_ALL
+                    || userId == filter.owningUserId) {
+                return super.newResult(filter, match, userId);
+            }
+            return null;
+        }
+
+// ================ IntentResovler.java ============================
+
+    @SuppressWarnings("unchecked")
+    protected R newResult(F filter, int match, int userId) { 
+        return (R)filter;
+    }
+```
+
+AMS 里面的除去前面那个判断，就是直接 new 了一个 R，也难怪，AMS 里面的 F 和 R 都是 BroadcastFilter。到这里 AMS 的 broadcastIntentLocked 就收集到了2个 List：
+
+<pre>
+List receivers = null;
+List<BroadcastFilter> registeredReceivers = null;
+</pre>
+
+分别是静态注册的接收器（ResolveInfo）和动态注册的接收器（BoradcastFilter）。
+
+### 2. 分发广播给动态注册接收器
+
+收集完广播匹配的接收器（静态和动态），就要开始分发了。我们接着往下看：
+
+```java
+    private final int broadcastIntentLocked(ProcessRecord callerApp,
+            String callerPackage, Intent intent, String resolvedType,
+            IIntentReceiver resultTo, int resultCode, String resultData,
+            Bundle map, String requiredPermission,
+            boolean ordered, boolean sticky, int callingPid, int callingUid,
+            int userId) {
+... ...
+            
+        int NR = registeredReceivers != null ? registeredReceivers.size() : 0;
+        // 判断下
+        if (!ordered && NR > 0) {
+            if (isDebug(intent)) {
+                Slog.d("test", "query registered receivers size=" + NR);
+                for (int i = 0; i < NR; i++) {
+                    BroadcastFilter filter = registeredReceivers.get(i);
+                    Slog.d("test", "No." + i + ": " + filter.toString() + ", priority=" + filter.getPriority());
+                }
+            }
+
+            // If we are not serializing this broadcast, then send the
+            // registered receivers separately so they don't wait for the
+            // components to be launched.
+            final BroadcastQueue queue = broadcastQueueForIntent(intent);
+            BroadcastRecord r = new BroadcastRecord(queue, intent, callerApp,
+                    callerPackage, callingPid, callingUid, requiredPermission,
+                    registeredReceivers, resultTo, resultCode, resultData, map,
+                    ordered, sticky, false, userId);
+            if (DEBUG_BROADCAST) Slog.v(
+                    TAG, "Enqueueing parallel broadcast " + r);
+            if (isDebug(intent)) Slog.d(
+                    "test", "broadcastIntentLocked: Enqueueing parallel broadcast " + r);
+            final boolean replaced = replacePending && queue.replaceParallelBroadcastLocked(r);
+            if (!replaced) {
+                queue.enqueueParallelBroadcastLocked(r);
+                queue.scheduleBroadcastsLocked();
+            }
+            registeredReceivers = null;
+            NR = 0;
+        }
+
+... ....
+
+        return ActivityManager.BROADCAST_SUCCESS;
+    }
+```
 
 未完待续 ... ...
 
