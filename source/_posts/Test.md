@@ -14,6 +14,7 @@ $ hexo new "My New Post"
 ```
 
 This is a blod text: **Ha Ha 粗体字体**
+This is a custom color font: <font color="#ff0000">Red color font</font>
 
 More info: [Writing](http://hexo.io/docs/writing.html)
 
