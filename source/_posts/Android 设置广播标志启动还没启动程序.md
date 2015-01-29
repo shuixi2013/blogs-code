@@ -7,7 +7,7 @@ tags: [android]
 在 android 中可以通过 context.sendBroadcast(Intent intent) 发送广播，让监听了该广播的程序处理业务。其中 Intent 中有一个 flag：
 
 ```java
-    /**
+    /*
      * If set, this intent will always match any components in packages that
      * are currently stopped.  This is the default behavior when
      * {@link #FLAG_EXCLUDE_STOPPED_PACKAGES} is not set.  If both of these

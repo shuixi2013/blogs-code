@@ -1670,7 +1670,7 @@ void AndroidRuntime::start(const char* className, const char* options)
 我们这里主要看 startSystemServer 这个函数，其它的是 zygote 的，zygote 的话，我有一篇工作小笔记（换系统字体那个）有说到，这里不多说。
 
 ```java
-    /** 
+    /*
      * Prepare the arguments and fork for the system server process.
      */
     private static boolean startSystemServer()
@@ -1735,7 +1735,7 @@ void AndroidRuntime::start(const char* className, const char* options)
 我们去看下 Zygote.forkSystemServer 这个函数：
 
 ```java
-    /**
+    /*
      * Special method to start the system server process. In addition to the
      * common actions performed in forkAndSpecialize, the pid of the child
      * process is recorded such that the death of the child process will cause
@@ -1772,7 +1772,7 @@ void AndroidRuntime::start(const char* className, const char* options)
 
 ```java
     // 注意前面打包的那个参数数据结构
-    /**
+    /*
      * Finish remaining work for the newly forked system server process.
      */
     private static void handleSystemServerProcess(
@@ -1816,7 +1816,7 @@ void AndroidRuntime::start(const char* className, const char* options)
 这里终于跑到 SS 进程里面去了，然后我接下去看 RuntimeInit.zygoteInit：
 
 ```java
-    /**
+    /*
      * The main function called when started through the zygote process. This
      * could be unified with main(), if the native code in nativeFinishInit()
      * were rationalized with Zygote startup.<p>
@@ -1918,7 +1918,7 @@ AndroidRuntime::AndroidRuntime() :
 继续看 invokeStaticMain（名字都叫这个份上了）：
 
 ```java
-    /**
+    /*
      * Invokes a static "main(argv[]) method on class "className".
      * Converts various failing exceptions into RuntimeExceptions, with
      * the assumption that they will then cause the VM instance to exit.

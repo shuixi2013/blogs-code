@@ -275,7 +275,7 @@ java 层的 SM 接口在 ServiceManager 这个类中，而且都是 static 方�
 ```java
 // ServiceManager.java ===========================
 
-    /**
+    /*
      * Returns a reference to a service with the given name.
      * 
      * @param name the name of the service to get
@@ -295,7 +295,7 @@ java 层的 SM 接口在 ServiceManager 这个类中，而且都是 static 方�
         return null;
     }
         
-    /**
+    /*
      * Place a new @a service called @a name into the service
      * manager.
      *

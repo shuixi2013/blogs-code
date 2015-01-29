@@ -55,7 +55,7 @@ ActivitManager.java 不说啥了，就是 sdk 公开的那些接口，它里面�
 
 // ActivityManagerNative.java ===========================
 
-    /**
+    /*
      * Retrieve the system's default/global activity manager.
      */
     static public IActivityManager getDefault() {
@@ -85,9 +85,9 @@ ActivityManagerNative 采用单列设计模式，保证一个进程中只有一�
 来看下 ActivityManagerNative 的继承关系：
 
 ```java
-public abstract class ActivityManagerNative extends Binder implements IActivityManager
-public class Binder implements IBinder
-public interface IActivityManager extends IInterface
+public abstract class ActivityManagerNative extends Binder implements IActivityManager {}
+public class Binder implements IBinder {}
+public interface IActivityManager extends IInterface {}
 ```
 
 AMN 继承自 Binder （实现 IBinder 接口，所有的远程接口都是这个），实现 IActivityManager， IActivityManager 继承自 IInterface 这个东西就是 binder 提供给客户端的接口，使用者通过继承这个类定义自己的接口。
@@ -152,7 +152,7 @@ AMN 实现上面的接口定义，里面还又个 ActivityManagerProxy（AMP）�
 ```java
 public abstract class ActivityManagerNative extends Binder implements IActivityManager
 {
-    /**
+    /*
      * Cast a Binder object into an activity manager interface, generating
      * a proxy if needed.
      */
@@ -315,14 +315,14 @@ public final class ActivityManagerService extends ActivityManagerNative
 WindowManager.java 这个 sdk 对上层应用提供的接口。然后这里有个 IWindowManager.aidl 的文件。虽然说是代码自动生成，但是开发者还是要写点东西的，人家好歹叫一个语言咧，不写点代码怎么行（傻瓜相机还要按快门咧）。只要在这个 aidl 文件中把要公开的接口按照一定的格式写就行了，那个格式感觉和 java 代码基本一样：
 
 ```java
-/**
+/*
  * System private interface to the window manager.
  *
  * {@hide}
  */
 interface IWindowManager
 {
-    /**
+    /*
      * ===== NOTICE =====
      * The first three methods must remain the first three methods. Scripts
      * and tools rely on their transaction number to work properly.
@@ -366,7 +366,7 @@ public class WindowManagerService extends IWindowManager.Stub
 ... ...
 
     // 实现接口业务
-    /**
+    /*
      * Starts the view server on the specified port.
      *
      * @param port The port to listener to.
@@ -437,7 +437,7 @@ public Stub()
 {
 this.attachInterface(this, DESCRIPTOR);
 }
-/**
+/*
  * Cast an IBinder object into an android.view.IWindowManager interface,
  * generating a proxy if needed.
  */
@@ -511,7 +511,7 @@ public java.lang.String getInterfaceDescriptor()
 {
 return DESCRIPTOR;
 }
-/**
+/*
      * ===== NOTICE =====
      * The first three methods must remain the first three methods. Scripts
      * and tools rely on their transaction number to work properly.
@@ -593,7 +593,7 @@ interface IWindowManager
             IRemoteCallback startedCallback, boolean scaleUp);
 
     // 第二 List 数组是 out 类型的
-    /** 
+    /*
      * Gets the infos for all visible windows.
      */
     void getVisibleWindowsForDisplay(int displayId, out List<WindowInfo> outInfos);
@@ -676,7 +676,7 @@ return super.onTransact(code, data, reply, flags);
 这里说个小插曲，在 core/java/com/android/internal/statusbar/IStatusBar.aidl 中有 **oneway** 这一个声明：
 
 ```java
-/** @hide */
+/* @hide */
 oneway interface IStatusBar
 {
     void setIcon(int index, in StatusBarIcon icon);
@@ -750,14 +750,14 @@ _data.recycle();
     // methods.
     final ArrayList<Object> mServiceCache = new ArrayList<Object>();
 
-    /**
+    /*
      * Override this class when the system service constructor needs a
      * ContextImpl.  Else, use StaticServiceFetcher below.
      */
     /*package*/ static class ServiceFetcher {
         int mContextCacheIndex = -1;   
 
-        /**
+        /*
          * Main entrypoint; only override if you don't need caching.
          */
         public Object getService(ContextImpl ctx) {
@@ -788,7 +788,7 @@ _data.recycle();
             }
         }
 
-        /**
+        /*
          * Override this to create a new per-Context instance of the
          * service.  getService() will handle locking and caching.
          */

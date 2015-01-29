@@ -432,7 +432,7 @@ frameworks/base/core/jni/android_os_Parcel.cpp
 Binder 这边的话：
 
 ```java
-    /**
+    /*
      * Convenience method for associating a specific interface with the Binder.
      * After calling, queryLocalInterface() will be implemented for you
      * to return the given owner IInterface when the corresponding
@@ -443,14 +443,14 @@ Binder 这边的话：
         mDescriptor = descriptor;      
     }
        
-    /**
+    /*
      * Default implementation returns an empty interface name.
      */
     public String getInterfaceDescriptor() {
         return mDescriptor;   
     }
 
-    /**
+    /*
      * Use information supplied to attachInterface() to return the
      * associated IInterface if it matches the requested
      * descriptor.
@@ -462,7 +462,7 @@ Binder 这边的话：
         return null;
     }
 
-    /**
+    /*
      * Default implementation is a stub that returns false.  You will want
      * to override this to do the appropriate unmarshalling of transactions.
      * 
@@ -498,7 +498,7 @@ Binder 这边的话：
         return false;
     }
 
-    /**
+    /*
      * Default implementation rewinds the parcels and calls onTransact.  On
      * the remote side, transact calls into the binder to do the IPC.
      */
@@ -845,13 +845,13 @@ BinderProxy 很多都直接是 native 方法。queryLocalInterface 直接放回 
 接下来就是接口部分了。IInterface :
 
 ```java
-/**
+/*
  * Base class for Binder interfaces.  When defining a new interface,
  * you must derive it from IInterface.
  */
 public interface IInterface
 {
-    /**
+    /*
      * Retrieve the Binder object associated with this interface.
      * You must use this instead of a plain cast, so that proxy objects
      * can return the correct result.

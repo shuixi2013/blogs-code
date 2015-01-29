@@ -27,7 +27,7 @@ Once the width and height are calculated,the setMeasureDimension(int width,int h
 在 Android 提提供的一个自定义 View 示例中（在 API Demos 中的 view/LabelView）可以看到一个重写 onMeasure 方法的实例，也比较好理解：
 
 ```java
-    /**
+    /*
      * @see android.view.View#measure(int, int)
      */
     @Override
@@ -36,7 +36,7 @@ Once the width and height are calculated,the setMeasureDimension(int width,int h
                 measureHeight(heightMeasureSpec));
     }
 
-    /**
+    /*
      * Determines the width of this view
      * @param measureSpec A measureSpec packed into an int
      * @return The width of the view, honoring constraints from measureSpec
@@ -62,7 +62,7 @@ Once the width and height are calculated,the setMeasureDimension(int width,int h
         return result;
     }
 
-    /**
+    /*
      * Determines the height of this view
      * @param measureSpec A measureSpec packed into an int
      * @return The height of the view, honoring constraints from measureSpec

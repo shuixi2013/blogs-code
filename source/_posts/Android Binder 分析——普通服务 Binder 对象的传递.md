@@ -40,7 +40,7 @@ frameworks/base/services/java/com/android/server/am/ServiceRecord.java
 
 ```java
 public interface ServiceConnection {
-    /** 
+    /* 
      * Called when a connection to the Service has been established, with
      * the {@link android.os.IBinder} of the communication channel to the
      * Service.
@@ -53,7 +53,7 @@ public interface ServiceConnection {
      */
     public void onServiceConnected(ComponentName name, IBinder service);
 
-    /** 
+    /*
      * Called when a connection to the Service has been lost.  This typically
      * happens when the process hosting the service has crashed or been killed.
      * This does <em>not</em> remove the ServiceConnection itself -- this
@@ -444,7 +444,7 @@ AM 中有一个 ServiceMap 保存了 ComponentName、Intent filter 相关的 Ser
 ```java
 // ServiceRecord.java ======================================
 
-/**
+/*
  * A running application service.
  */
 final class ServiceRecord extends Binder {

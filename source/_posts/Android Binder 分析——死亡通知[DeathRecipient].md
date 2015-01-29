@@ -1113,7 +1113,7 @@ public interface IBinder {
     
     ... ....
 
-    /**
+    /*
      * Interface for receiving a callback when the process hosting an IBinder
      * has gone away.
      * 
@@ -1123,7 +1123,7 @@ public interface IBinder {
         public void binderDied();
     }
 
-    /**
+    /*
      * Register the recipient for a notification if this binder
      * goes away.  If this binder object unexpectedly goes away
      * (typically because its hosting process has been killed),
@@ -1142,7 +1142,7 @@ public interface IBinder {
     public void linkToDeath(DeathRecipient recipient, int flags)
             throws RemoteException;
 
-    /**
+    /*
      * Remove a previously registered death notification.
      * The recipient will no longer be called if this object
      * dies.
@@ -1174,13 +1174,13 @@ public class Binder implements IBinder {
 ... ...
 
     // 和 native 层的一样，Bn 不允许注册的（这里是空函数而已）
-    /**
+    /*
      * Local implementation is a no-op.
      */
     public void linkToDeath(DeathRecipient recipient, int flags) {
     }
     
-    /**
+    /*
      * Local implementation is a no-op.
      */
     public boolean unlinkToDeath(DeathRecipient recipient, int flags) {

@@ -111,7 +111,7 @@ public abstract void onReceive(Context context, Intent intent);
 
 ```java
 // 这个看注释就知道是接收到广播后触发处理的函数
-/**
+/*
  * System private API for dispatching intent broadcasts.  This is given to the 
  * activity manager as part of registering for an intent broadcasts, and is
  * called when it receives intents.
@@ -387,7 +387,7 @@ oneway interface IIntentReceiver {
 我们先说说参数，IIntentReceiver 是支持 Binder 的，传过来的是 Bp，IntentFilter 实现了 Parcelable 接口，也能 IPC 传过来。然后我们再开始说代码，一开始先获取注册调用者的进程记录（ProcessRecord，这个东西在 Binder 篇有说过，这里不多说）。然后广播有个 sticky 的功能，我们先不管这些花哨功能先。后面出现了一个 ReceiverList 的对象，我们来看看：
 
 ```java
-/**
+/*
  * A receiver object that has registered for one or more broadcasts.
  * The ArrayList holds BroadcastFilter objects.
  */
@@ -451,7 +451,7 @@ class BroadcastFilter extends IntentFilter {
 //
 // ================= ActivityManagerService.java ========================
 
-    /**
+    /*
      * Resolver for broadcast intents to registered receivers.
      * Holds BroadcastFilter (subclass of IntentFilter).
      */
@@ -463,7 +463,7 @@ class BroadcastFilter extends IntentFilter {
 
 // ================= IntentResolver.java ========================
 
-/**
+/*
  * {@hide}
  */
 public abstract class IntentResolver<F extends IntentFilter, R extends Object> {
@@ -476,25 +476,25 @@ public abstract class IntentResolver<F extends IntentFilter, R extends Object> {
 
     // 存数据的都在这里，基本不是 HashMap 就是 HashSet
     // 注释也写得很清楚是拿来存什么的
-    /**
+    /*
      * All filters that have been registered.
      */
     private final HashSet<F> mFilters = new HashSet<F>();
 
-    /**
+    /*
      * All of the MIME types that have been registered, such as "image/jpeg",
      * "image/*", or "{@literal *}/*".
      */
     private final HashMap<String, F[]> mTypeToFilter = new HashMap<String, F[]>();
 
-    /**
+    /*
      * The base names of all of all fully qualified MIME types that have been
      * registered, such as "image" or "*".  Wild card MIME types such as
      * "image/*" will not be here.
      */
     private final HashMap<String, F[]> mBaseTypeToFilter = new HashMap<String, F[]>();
 
-    /**
+    /*
      * The base names of all of the MIME types with a sub-type wildcard that
      * have been registered.  For example, a filter with "image/*" will be
      * included here as "image" but one with "image/jpeg" will not be
@@ -503,18 +503,18 @@ public abstract class IntentResolver<F extends IntentFilter, R extends Object> {
      */
     private final HashMap<String, F[]> mWildTypeToFilter = new HashMap<String, F[]>();
 
-    /**
+    /*
      * All of the URI schemes (such as http) that have been registered.
      */
     private final HashMap<String, F[]> mSchemeToFilter = new HashMap<String, F[]>();
 
-    /**
+    /*
      * All of the actions that have been registered, but only those that did
      * not specify data.
      */
     private final HashMap<String, F[]> mActionToFilter = new HashMap<String, F[]>();
 
-    /**
+    /*
      * All of the actions that have been registered and specified a MIME type.
      */
     private final HashMap<String, F[]> mTypedActionToFilter = new HashMap<String, F[]>();

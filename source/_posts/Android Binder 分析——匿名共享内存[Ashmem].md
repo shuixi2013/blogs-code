@@ -73,7 +73,7 @@ java 层的接口要拿 2.3 的来说，因为从 4.1（具体哪个版本我不
     private boolean mAllowPurging = false;  // true if our ashmem region is unpinned
     private final boolean mOwnsRegion;  // false if this is a ref to an existing ashmem region
 
-    /** 
+    /*
      * Allocates a new ashmem region. The region is initially not purgable.
      *
      * @param name optional name for the file (can be null).
@@ -196,7 +196,7 @@ static jint android_os_MemoryFile_mmap(JNIEnv* env, jobject clazz, jobject fileD
 Proc A 算是把共享内存创建好了也 mmap 到本进程，现在就要把 fd 倒腾给 Proc B。现在我们假设 Proc A 是 Bn 端，Proc B 是 Bp 端。然后来看看 MemroyFile 的一个接口：
 
 ```java
-    /**
+    /*
      * Gets a ParcelFileDescriptor for the memory file. See {@link #getFileDescriptor()}
      * for caveats. This must be here to allow classes outside <code>android.os</code< to
      * make ParcelFileDescriptors from MemoryFiles, as
@@ -227,7 +227,7 @@ ParcelFileDescriptor，看名字你是不是明白了什么咧，能够 Parcelab
         mParcelDescriptor = null;
     }
 
-    /**
+    /*
      * {@inheritDoc}
      * If {@link Parcelable#PARCELABLE_WRITE_RETURN_VALUE} is set in flags,
      * the file descriptor will be closed after a copy is written to the Parcel.
@@ -345,7 +345,7 @@ int Parcel::readFileDescriptor() const
 Proc B 拿到 fd 后就可以 mmap Proc A 创建的共享内存了（还是创建 MemroyFile）：
 
 ```java
-    /**
+    /*
      * Creates a reference to an existing memory file. Changes to the original file
      * will be available through this reference.
      * Calls to {@link #allowPurging(boolean)} on the returned MemoryFile will fail.
@@ -1644,14 +1644,14 @@ static int ashmem_release(struct inode *ignored, struct file *file)
         }    
     };
 
-    /**
+    /*
      * No special parcel contents.
      */
     public int describeContents() {
         return 0;
     }
 
-    /**
+    /*
      * Write the bitmap and its pixels to the parcel. The bitmap can be
      * rebuilt from the parcel by calling CREATOR.createFromParcel().
      * @param p    Parcel object to write the bitmap data into

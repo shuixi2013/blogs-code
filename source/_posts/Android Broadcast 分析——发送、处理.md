@@ -284,7 +284,7 @@ AMS 中处理广播的流程就是 broadcastIntentLocked 这个函数，这个�
 我们在说之前先看看 ResolveInfo 这个东西，好歹返回的列表里面是这个东西：
 
 ```java
-/**
+/*
  * Information that is returned from resolving an intent
  * against an IntentFilter. This partially corresponds to
  * information collected from the AndroidManifest.xml's
@@ -645,7 +645,7 @@ List<BroadcastFilter> registeredReceivers = null;
 这里出现了2个新的数据结构：BroadcastQueue 和 BroadcastRecord。我们来一个一个看，首先是 BroadcastQueue：
 
 ```java
-/**
+/*
  * BROADCASTS
  *
  * We keep two broadcast queues and associated bookkeeping, one for those at
@@ -700,7 +700,7 @@ public class BroadcastQueue {
 看注释，说 AMS 中有2个这种 BroacastQueue，一个是前台的，一个是后台的，前台的处理优先级比后台的高一些。然后里面有2个比较重要的 ArrayList：mParallelBroadcasts 和 mOrderedBroadcasts。看名字就很明显了，一个是串行广播记录的，一个是并行广播记录的。然后我们再来看下 BroadcastRecord 的：
 
 ```java
-/**
+/*
  * An active intent broadcast.
  */
 class BroadcastRecord extends Binder {
