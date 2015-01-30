@@ -1145,6 +1145,8 @@ static void *buffer_end_page(struct binder_buffer *buffer)
 
 回到 `binder_free_buf`，向后合并是删掉后面那块（next），向前合并是删掉自己（buffer），拿 prev 重新当作自己。最后 `binder_insert_free_buffer` 把合并之后的 buffer 重新插入到 `proc->free_buffers` 中供下次申请的时候使用。
 
+这个做法其实我和以前弄 MiniGUI 的一个 GAL 中的显存管理很类似，简单但是有效，可以来这里对比一下（那里还有图说明）： [STi7167 GAL 显存管理](http://light3moon.com/2015/01/21/STi7167 GAL 开发笔记/#显存管理 "STi7167 GAL 显存管理") 
+
 ## 总结
 感觉 binder 下了不少功夫进行效率的优化：
 

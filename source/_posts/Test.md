@@ -9,8 +9,16 @@ Welcome to [Hexo](http://hexo.io/)! This is your very first post. Check [documen
 
 ### my test
 
-This is a blod text: **Ha Ha 粗体字体**
-This is a custom color font: <font color="#ff0000">Red color font</font>
+An activity is a single, focused thing that the user can do. **Almost all activities interact with the user**, so the Activity class takes care of creating a window for you in which you can place your UI with setContentView(View). While activities are often presented to the user as full-screen windows, they can also be used in other ways: as floating windows (via a theme with windowIsFloating set) or embedded inside of another activity (using ActivityGroup). There are <font color="#ff0000">two methods</font> almost all subclasses of Activity will implement:
+
+* onCreate(Bundle) is where you initialize your activity. Most importantly, here you will usually call setContentView(int) with a layout resource defining your UI, and using findViewById(int) to retrieve the widgets in that UI that you need to interact with programmatically.
+* onPause() is where you deal with the user leaving your activity. Most importantly, any changes made by the user should at this point be committed (usually to the ContentProvider holding the data). 
+
+To be of use with Context.startActivity(), all activity classes must have a corresponding `<activity>` declaration in their package's AndroidManifest.xml.The Activity class is an important part of an application's overall lifecycle, and the way activities are launched and put together is a fundamental part of the platform's application model. For a detailed perspective on the structure of an Android application and how activities behave, please read the Application Fundamentals and Tasks and Back Stack developer guides.
+
+
+**垂直同步**又称场同步（Vertical Hold），从CRT显示器的显示原理来看，单个象素组成了水平扫描线，水平扫描线在垂直方向的堆积形成了完整的画面。显示器的刷新率受显卡DAC控制，显卡DAC完成一帧的扫描后就会产生一个垂直同步信号。我们平时所说的打开垂直同步指的是将该信号送入显卡3D图形处理部分，从而让显卡在生成3D图形时受垂直同步信号的制约。主要区别在于那些高速运行的游戏，比如实况，FPS游戏，打开后能防止游戏画面高速移动时画面撕裂现象，当然打开后如果你的游戏画面FPS数能达到或超过你显示器的刷新率，这时你的游戏画面FPS数被限制为你显示器的刷新率。你会觉得原来移动时的游戏画面是如此舒服，如果达不到会出现不同程度的跳帧现象，FPS与刷新率差距越大跳帧越严重。关闭后除高速运动的游戏外其他游戏基本看不出<font color="#ff0000">画面撕裂现象</font>。
+
 
 This code hightlight:
 
@@ -22,7 +30,7 @@ This code hightlight:
 
 namespace android {
 
-// ---------------------------------------------------------------------------
+// ---------------------------------------------
 
 class Client;
 class DisplayEventConnection;
@@ -315,6 +323,40 @@ frameworks/base/services/java/com/android/server/am/ServiceRecord.java
 
 </LinearLayout>
 ```
+
+**html table:** (en, the parser render bug ... ...)
+
+---
+
+<table border="1">
+<tr>
+  <th align="center">API</th>
+  <th align="center">存储位置</th>
+  <th align="center">区域</th>
+  <th align="center">特性</th>
+</tr>
+<tr>
+  <td align="left">CreateMemDC</td>
+  <td align="center">off-screen</td>
+  <td align="center">指定大小</td>
+  <td align="center">我就是要写长一点一点一点点，哈哈</td>
+</tr>
+<tr>
+  <td align="left">CreateSubMemDC</td>
+  <td align="center">off-screen</td>
+  <td align="center">指定大小</td>
+  <td align="center">短一点</td>
+</tr>
+</table>
+
+---
+
+manually fix it:
+
+<table border="1"><tr><th align="center">API</th><th align="center">存储位置</th><th align="center">区域</th><th align="center">特性</th></tr><tr>  <td align="left">CreateMemDC</td><td align="center">off-screen</td><td align="center">指定大小</td><td align="center">我就是要写长一点一点一点点，哈哈</td>
+</tr><tr><td align="left">CreateSubMemDC</td><td align="center">off-screen</td><td align="center">指定大小</td><td align="center">短一点</td></tr></table>
+
+My test end
 
 ### Create a new post
 
