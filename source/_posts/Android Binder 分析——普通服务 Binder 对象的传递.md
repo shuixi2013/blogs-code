@@ -1095,7 +1095,7 @@ app != null && app.thread != null 这个判断说明服务所在的进程已经�
 这个 scheduleCreateService 名字太形象的，还真是 new 了一个 Service 对象出来 -_-||。这样 Service 的代码就在主线程中加载起来了（执行了）。前面 AM 那边又会调用 requestServiceBindingsLocked 会让 AT 这边继续向 Handle 发一个 handleBindService 的消息，Handle 的 MessageQueue 会排队的，不用担心，能保证先 CreateService 再 BindService。
 
 ### 服务进程没有启动，服务代码也还没执行
-前面2种情况说完了。第三种是最悲剧的，服务没运行，连所在的进程都还没跑起来。这种情况下需要启动服务所在进程、然后执行服务代码，最后才能绑定服务。这种情况是最慢的，所以 bindService 有些时候回调快、有些时候回调慢，就是这个原因（看我这篇文章里有关 Zygote 启动进程的就知道慢了： [工作小笔记——Android 动态切换系统字体](http://mingming-killer.diandian.com/post/2014-10-23/40063248496 "工作小笔记——Android 动态切换系统字体")）。
+前面2种情况说完了。第三种是最悲剧的，服务没运行，连所在的进程都还没跑起来。这种情况下需要启动服务所在进程、然后执行服务代码，最后才能绑定服务。这种情况是最慢的，所以 bindService 有些时候回调快、有些时候回调慢，就是这个原因（看我这篇文章里有关 Zygote 启动进程的就知道慢了： [工作小笔记——Android 动态切换系统字体](http://light3moon.com/2015/01/31/工作小笔记——Android 动态切换系统字体 "工作小笔记——Android 动态切换系统字体")）。
 
 ![](http://7u2hy4.com1.z0.glb.clouddn.com/android/Binder-service/3.png)
 （realStartServiceLocked 后面的我省略了，第二种情况画过了）

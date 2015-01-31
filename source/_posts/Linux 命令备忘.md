@@ -195,12 +195,21 @@ zip -g xx.zip xx
 * 卸载 deb 包： dpkg -r package-name
 * 包名可以通过 dpkg --info package-file.deb 查看
 
-## df
-查看磁盘分区大小，可以加 -h 显示单位。
-
 ## xargs
 可以显示指定让上一个命令的输出作为下一个命令的输入参数。例如： 
 <pre>
 # 先搜索以 buildin 结尾的文件，然后再删掉。
 find . -iname *.buildin | xargs rm 
 </pre>
+
+## which, ldd
+
+* which: 显示到某个程序（命令）的所在路径，这个检查要用某些版本的程序的时候（例如说编译器）很有用。
+* ldd: 显示某个程序链接的 so 的路径，同样对于查看某些库的版本很有用。
+
+## who, uname
+
+* who: 查看当前登录的用户
+* uname: 查看当前系统的一些信息（例如架构，内核等），可以加 -a 显示全部
+
+
