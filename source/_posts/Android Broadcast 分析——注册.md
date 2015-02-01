@@ -168,6 +168,7 @@ oneway interface IIntentReceiver {
             
             // new 这个 ReceiverDispatcher 的时候就会 new 一个 InnerReceiver
             mIIntentReceiver = new InnerReceiver(this, !registered);
+            // 保存广播接收器对象
             mReceiver = receiver;
             mContext = context;
             // 保存指定的处理广播的线程（Handler）
