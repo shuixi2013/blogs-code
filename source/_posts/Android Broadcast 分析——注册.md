@@ -15,6 +15,7 @@ android 广播的注册方式分为2种：一种是动态注册，一种是静�
 ```bash
 # Content 广播相关的代码
 frameworks/base/core/java/android/app/ContextImpl.java
+frameworks/base/core/java/android/app/LoadedApk.java
 
 frameworks/base/core/java/android/content/Intent.java
 frameworks/base/core/java/android/content/IntentFilter.java
@@ -28,10 +29,10 @@ frameworks/base/services/java/com/android/server/IntentResolver.java
 frameworks/base/services/java/com/android/server/am/ActivityManagerService.java
 frameworks/base/services/java/com/android/server/am/RecevierList.java
 frameworks/base/services/java/com/android/server/am/BroadcastFilter.java
+frameworks/base/services/java/com/android/server/am/BroadcastRecord.java
 
 # PM 广播相关代码
 frameworks/base/services/java/com/android/server/pm/PackageManagerService.java
-frameworks/base/services/java/com/android/server/pm/BroadcastFilter.java
 ```
 
 ## 动态注册
@@ -83,7 +84,7 @@ public abstract void onReceive(Context context, Intent intent);
                     // 默认使用的是当前注册进程的主线程来处理接收到的广播
                     scheduler = mMainThread.getHandler();
                 }    
-                // 如果 mPackageInfo(LoadApk) 不为空，去调用其中的方法取 IIntentReceiver
+                // 如果 mPackageInfo(LoadedApk) 不为空，去调用其中的方法取 IIntentReceiver
                 rd = mPackageInfo.getReceiverDispatcher(
                     receiver, context, scheduler,
                     mMainThread.getInstrumentation(), true);

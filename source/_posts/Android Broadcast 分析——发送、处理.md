@@ -9,6 +9,8 @@ tags: [android]
 ```bash
 # Content 广播相关的代码
 frameworks/base/core/java/android/app/ContextImpl.java
+frameworks/base/core/java/android/app/LoadedApk.java
+frameworks/base/core/java/android/app/ActivityThread.java
 
 frameworks/base/core/java/android/content/Intent.java
 frameworks/base/core/java/android/content/IntentFilter.java
@@ -21,15 +23,18 @@ frameworks/base/services/java/com/android/server/IntentResolver.java
 # AM 广播相关代码
 frameworks/base/services/java/com/android/server/am/ActivityManagerService.java
 frameworks/base/services/java/com/android/server/am/RecevierList.java
+frameworks/base/services/java/com/android/server/am/BroadcastQueue.java
 frameworks/base/services/java/com/android/server/am/BroadcastFilter.java
+frameworks/base/services/java/com/android/server/am/BroadcastRecord.java
 
 # PM 广播相关代码
 frameworks/base/services/java/com/android/server/pm/PackageManagerService.java
-frameworks/base/services/java/com/android/server/pm/BroadcastFilter.java
 ```
 
 ## 发送接口
+
 ### 应用接口
+
 普通应用发送广播的接口和注册篇注册的一样，都在 Context 里面，但是实现在 ContextImpl 里面：
 
 ```java
@@ -81,6 +86,7 @@ AMS 里面的这个接口，有一个 boolean 参数 serialized（还有个 stic
 回到接口上，加了多线程互斥锁之后，调用 broadcastIntentLocked 处理。这个函数就是看名字是发送广播（Intent），其实就是处理过程，而且非常长，我们发到后面慢慢说。
 
 ### 系统发送接口
+
 我们来看看系统是怎么发送的。我们以前面说的 BOOT_COMPLETED 广播来看。这个广播是 AMS 中发出来的：
 
 ```java
@@ -126,10 +132,11 @@ AMS 里面的这个接口，有一个 boolean 参数 serialized（还有个 stic
 
 AMS 里面自己发广播，直接调用 broadcastIntentLocked 了。估计其他系统服务里面还是调用 AMS 的 broadcastIntent 接口的吧。
 
-## 处理流程
-AMS 中处理广播的流程就是 broadcastIntentLocked 这个函数，这个函数也是非常长的（差不多6、7百行），我们分段慢慢来（会跳过一些非重要的部分）：
 
-### 1. 收集广播接收器
+接下来说下广播处理流程。AMS 中处理广播的流程就是 broadcastIntentLocked 这个函数，这个函数也是非常长的（差不多6、7百行），我们分段慢慢来（会跳过一些非重要的部分）：
+
+## a. 收集广播接收器
+
 ```java
     private final int broadcastIntentLocked(ProcessRecord callerApp,
             String callerPackage, Intent intent, String resolvedType,
@@ -207,7 +214,8 @@ AMS 中处理广播的流程就是 broadcastIntentLocked 这个函数，这个�
 
 一个广播发出来了，AMS 要做的第一步，首先是要找到有哪些接收器要接收这条广播。前面一篇说了，注册接收器有动态注册和静态注册2种。这里看代码果然也是分开2步来收集的。我们先来看收集静态的：
 
-#### 1.1 收集静态注册接收器
+### a.a 收集静态注册接收器
+
 静态注册接收器收集由 collectReceiverComponents 处理：
 
 ```java
@@ -579,9 +587,10 @@ public class ResolveInfo implements Parcelable {
     };
 ```
 
-这个优先级在注册篇说过了，在 mainfest 里面声明 receiver 的 filter 那里设置的（只有系统应用有权限设置）。
+这个优先级在注册篇说过了，在 manifest 里面声明 receiver 的 filter 那里设置的（只有系统应用有权限设置）。
 
-#### 1.2 收集动态注册接收器
+### a.b 收集动态注册接收器
+
 上面看过收集静态的过程，下面我们来看看收集动态注册的接收器：
 
 ```java
@@ -618,7 +627,8 @@ List<BroadcastFilter> registeredReceivers = null;
 
 分别是静态注册的接收器（ResolveInfo）和动态注册的接收器（BoradcastFilter）。
 
-### 2. 分发广播给动态注册接收器
+## b. 分发广播给动态注册接收器
+
 收集完广播匹配的接收器（静态和动态），就要开始分发了。我们接着往下看：
 
 ```java
@@ -1295,7 +1305,7 @@ LoadedApk.ReceiverDispatcher 的 mReceiver 就是注册广播接收器的时候 
 
 这里我们从 processNextBroadcast 分段那里直接返回，因为后面是串行广播的处理（静态注册的接收器），然后我们就可以回到 AMS 的 broadcastIntentLocked 继续往下走了。
 
-### 3. 分发广播给静态注册的接收器
+## c. 分发广播给静态注册接收器
 
 我们接着往下看 broadcastIntentLocked，下面是这么一段：
 
@@ -1506,6 +1516,7 @@ LoadedApk.ReceiverDispatcher 的 mReceiver 就是注册广播接收器的时候 
                 if (DEBUG_BROADCAST_LIGHT) Slog.v(TAG, "Processing ordered broadcast ["
                         + mQueueName + "] " + r);           
             }
+            // 如果没有设置超时的话，设置一个超时（这个超时的作用后面再说）
             if (! mPendingBroadcastTimeoutMessage) {
                 long timeoutTime = r.receiverTime + mTimeoutPeriod;
                 if (DEBUG_BROADCAST) Slog.v(TAG,
@@ -1540,20 +1551,7 @@ LoadedApk.ReceiverDispatcher 的 mReceiver 就是注册广播接收器的时候 
             }
 ```
 
-到这里其实都还不是静态注册接收器的处理，只是把前面动态注册的接收器串行处理了而已，流程前面说过了。不过注意这里设置了一个超时：
-
-```java
-    final void setBroadcastTimeoutLocked(long timeoutTime) {
-        if (! mPendingBroadcastTimeoutMessage) {
-            Message msg = mHandler.obtainMessage(BROADCAST_TIMEOUT_MSG, this);
-            // android 中的超时等待基本都是通过 delay message 来实现的
-            mHandler.sendMessageAtTime(msg, timeoutTime);
-            mPendingBroadcastTimeoutMessage = true;
-        }                     
-    }
-```
-
-如果到了设置的时间当前的接收器还没处理完，AMS 就会执行超时操作，这个操作我们后面来讨论，现在我们继续往下：
+到这里其实都还不是静态注册接收器的处理，只是把前面动态注册的接收器串行处理了而已，流程前面说过了。现在我们继续往下：
 
 ```java
             // Hard case: need to instantiate the receiver, possibly
@@ -1682,7 +1680,7 @@ LoadedApk.ReceiverDispatcher 的 mReceiver 就是注册广播接收器的时候 
 
 下面就要分2种情况来讨论。还记得 [Android Binder 分析——普通服务 Binder 对象的传递](http://light3moon.com/2015/01/28/Android Binder 分析——普通服务 Binder 对象的传递 "Android Binder 分析——普通服务 Binder 对象的传递")  中分了3种情况来讨论启动普通应用的服务，这里也是同样的道理。要分为接收器的进程是否已经启动在讨论：
 
-#### 接收器进程已经启动
+### 接收器进程已经启动
 
 我们先来看简单的情况，接收器的进程已经启动。这种情况不需要等待接收器进程启动，可以直接发起 IPC 调用，在接收器进程中跑处理广播的回调：
 
@@ -2191,7 +2189,9 @@ data.finish()
 ... ...
 
             // 现在我们可以来说说前面略过的这一段了
-            do { 
+            do {
+                // 串行广播列表 size 为0，说明已经没有匹配的接收器了
+                // 可以结束本次广播处理了， return 返回。 
                 if (mOrderedBroadcasts.size() == 0) { 
                     // No more broadcasts pending, so all done!
                     mService.scheduleAppGcsLocked();
@@ -2342,15 +2342,207 @@ APP_RECEIVE 的 state 在静态注册接收器分2种情况讨论那里设置的
 IDLE(init) --> APP_RECEIVE(handle) --> IDLE(finish)
 </pre>
 
-然后后面处理下一个接收器就是和前面一样的了。这样就形成了静态注册接收器一个接一个的处理。不过细心的你应该发现了一点，这种实现有个很不靠谱的地方：那就是它要假设上一个接收器正常完成处理。那么如果上一个接收器在处理的过程中挂掉了，或是在处理的时候耗费了大量时间还没处理，是不是串行广播就没法发送到下一个接收器了呢。这个问题我们这里先不讨论，我们得继续回去把静态注册接收器的第二种情况讨论完，再说这个问题（不然越扯越远，前面说的什么都忘记了）。
+然后后面处理下一个接收器就是和前面一样的了，然后直到 mOrderedBroadcasts 中没有待处理的接收器为止。这样就形成了静态注册接收器一个接一个的处理。不过细心的你应该发现了一点，这种实现有个很不靠谱的地方：那就是它要假设上一个接收器正常完成处理。那么如果上一个接收器在处理的过程中挂掉了，或是在处理的时候耗费了大量时间还没处理，是不是串行广播就没法发送到下一个接收器了呢。这个问题我们留在后面再讨论，我们得继续回去把静态注册接收器的第二种情况讨论完，再说这个问题（不然越扯越远，前面说的什么都忘记了）。
 
 占位图（有时间补个图先，不然字和代码太多头晕了）
 
-#### 接收器进程还没启动 
+### 接收器进程还没启动 
 
-未完待续 ... ...
+好现在是比较复杂的情况了，接收器进程还没启动，经过之前 Binder 普通服务篇大致能猜到这里也是发请求给 AMS 去启动指定的进程，然后等待接收器进程启动，再做广播处理。我们先接着看 processNextBroadcast 最后的处理：
 
+```java
+            // Not running -- get it started, to be executed when the app comes up.
+            if (DEBUG_BROADCAST)  Slog.v(TAG, 
+                    "Need to start app ["          
+                    + mQueueName + "] " + targetProcess + " for broadcast " + r);
+            // 果然是调用 AMS 去启动目标进程
+            if ((r.curApp=mService.startProcessLocked(targetProcess,
+                    info.activityInfo.applicationInfo, true,
+                    r.intent.getFlags() | Intent.FLAG_FROM_BACKGROUND, 
+                    "broadcast", r.curComponent,   
+                    (r.intent.getFlags()&Intent.FLAG_RECEIVER_BOOT_UPGRADE) != 0, false))
+                            == null) {                     
+                // Ah, this recipient is unavailable.  Finish it if necessary,
+                // and mark the broadcast record as ready for the next.
+                Slog.w(TAG, "Unable to launch app "
+                        + info.activityInfo.applicationInfo.packageName + "/"
+                        + info.activityInfo.applicationInfo.uid + " for broadcast "
+                        + r.intent + ": process is bad");
+                logBroadcastReceiverDiscardLocked(r);
+                // 经过上面的分析，下面这2个函数的调用是结束当前这个接收器的处理接着处理下一个，
+                // 因为如果启动接收器进程失败了，就忽略这个，接着要处理下一个
+                finishReceiverLocked(r, r.resultCode, r.resultData,
+                        r.resultExtras, r.resultAbort, true);
+                scheduleBroadcastsLocked();    
+                r.state = BroadcastRecord.IDLE;
+                return;
+            }
 
+            // 这里保存一下等待接收器进程启动的广播对象和索引
+            mPendingBroadcast = r;         
+            mPendingBroadcastRecvIndex = recIdx;
+```
+
+AMS 启动进程的 startProcessLocked 接口这里不再多说，可以去 [Binder 普通服务篇的相关章节](http://light3moon.com/2015/01/28/Android Binder 分析——普通服务 Binder 对象的传递/#服务进程没有启动，服务代码也还没执行 "Binder 普通服务篇的相关章节") 看一下。然后后面把当前这一次的 BroadcastRecord 保存到了 mPendingBroadcast 中。这个变量前面有看到过，但是没细说。不过经过 Binder 普通服务篇应该不陌生了，这就是要等候接收器进程启动起来，然后 AMS 接着处理的时候能找回之前等待进程启动的 BroadcastRecord（进程启动最后是会通知 AMS 做一些事情的）。虽然说基本流程我们已经猜得差不多了，但是还是继续把代码看完吧。
+
+上面这里就是 processNextBroadcast 最后的部分了。发送启动接收器进程请求给 AMS 之后，这次的广播处理暂时就完了。然后如果接收器进程正常启动的话那么它的 ActivityThread 会调用 AMS 的 attachApplication：
+
+```java
+    public final void attachApplication(IApplicationThread thread) {
+        synchronized (this) {
+            int callingPid = Binder.getCallingPid();
+            final long origId = Binder.clearCallingIdentity(); 
+            attachApplicationLocked(thread, callingPid);
+            Binder.restoreCallingIdentity(origId);
+        }
+    } 
+
+... ...
+
+    private final boolean attachApplicationLocked(IApplicationThread thread,
+            int pid) {
+        
+        // Find the application record that is being attached...  either via
+        // the pid if we are running in multiple processes, or just pull the
+        // next app record if we are emulating process with anonymous threads.
+        ProcessRecord app;
+        if (pid != MY_PID && pid >= 0) {
+            synchronized (mPidsSelfLocked) {
+                app = mPidsSelfLocked.get(pid);
+            }   
+        } else {    
+            app = null; 
+        }  
+
+... ...
+
+        // 这里检测下是不是有广播在等待新启动的进程
+        // Check if a next-broadcast receiver is in this process...
+        if (!badApp && isPendingBroadcastProcessLocked(pid)) {
+            try {
+                // 如果有的话就要继续执行广播处理
+                didSomething = sendPendingBroadcastsLocked(app);
+            } catch (Exception e) {
+                // If the app died trying to launch the receiver we declare it 'bad'
+                badApp = true; 
+            }     
+        }     
+
+        // Check whether the next backup agent is in this process...
+        if (!badApp && mBackupTarget != null && mBackupTarget.appInfo.uid == app.uid) {
+            if (DEBUG_BACKUP) Slog.v(TAG, "New app is backup target, launching agent for " + app); 
+            ensurePackageDexOpt(mBackupTarget.appInfo.packageName);
+            try { 
+                thread.scheduleCreateBackupAgent(mBackupTarget.appInfo,
+                        compatibilityInfoForPackageLocked(mBackupTarget.appInfo),
+                        mBackupTarget.backupMode);
+            } catch (Exception e) {
+                Slog.w(TAG, "Exception scheduling backup agent creation: ");
+                e.printStackTrace();
+            }     
+        }     
+
+        if (badApp) {
+            // todo: Also need to kill application to deal with all
+            // kinds of exceptions.
+            handleAppDiedLocked(app, false, true);
+            return false;
+        }     
+
+        if (!didSomething) {
+            updateOomAdjLocked();
+        }     
+
+        return true; 
+    }
+```
+
+我们来看是怎么检测的：
+
+```java
+    boolean isPendingBroadcastProcessLocked(int pid) {
+        return mFgBroadcastQueue.isPendingBroadcastProcessLocked(pid)
+                || mBgBroadcastQueue.isPendingBroadcastProcessLocked(pid);
+    }
+
+// ============== BroadcastQueue.java ====================
+
+    public boolean isPendingBroadcastProcessLocked(int pid) {
+        return mPendingBroadcast != null && mPendingBroadcast.curApp.pid == pid;
+    }
+```
+
+果然前面保存的 mPendingBroadcast 是要等着后面用的。然后我们继续看 AMS 的 sendPendingBroadcastsLocked：
+
+```java
+    // 这注释已经说得很清楚了
+    // The app just attached; send any pending broadcasts that it should receive
+    boolean sendPendingBroadcastsLocked(ProcessRecord app) { 
+        boolean didSomething = false;
+        for (BroadcastQueue queue : mBroadcastQueues) {
+            didSomething |= queue.sendPendingBroadcastsLocked(app);
+        }   
+        return didSomething;
+    }
+
+// ============== BroadcastQueue.java ====================
+
+    public boolean sendPendingBroadcastsLocked(ProcessRecord app) {
+        boolean didSomething = false;
+        // 取之前等待接收器进程启动的 BroadcastRecord
+        final BroadcastRecord br = mPendingBroadcast; 
+        if (br != null && br.curApp.pid == app.pid) {
+            try {
+                // 这里接上处理之后，就把 mPendingBroadcast 设置成 null
+                mPendingBroadcast = null;
+                // 下面这个函数就接上接收器进程已经启动的流程了
+                processCurBroadcastLocked(br, app);
+                didSomething = true;
+            } catch (Exception e) {
+                Slog.w(TAG, "Exception in new application when starting receiver "
+                        + br.curComponent.flattenToShortString(), e);
+                logBroadcastReceiverDiscardLocked(br);
+                // 出错了继续要把广播发给一下个接收器
+                finishReceiverLocked(br, br.resultCode, br.resultData,
+                        br.resultExtras, br.resultAbort, true);
+                scheduleBroadcastsLocked();
+                // We need to reset the state if we failed to start the receiver.
+                br.state = BroadcastRecord.IDLE;
+                throw new RuntimeException(e.getMessage());
+            }       
+        }                   
+        return didSomething;
+    }
+```
+
+看到 processCurBroadcastLocked 就松了一口气，后面的流程就和上面静态接收器进程已经启动的情况一样了。好像有了之前的知识（Binder 普通服务篇），这种复杂的情况这里说起来也没多复杂的样子，果然稍微明白 android 的一些设计手法之后很多地方都通用的说。
+
+占位图（有时间补个图先，不然字和代码太多头晕了）
+
+## 优先级问题
+
+到这里广播的发送、处理流程就差不多说完了。不过前面有说到优先级的问题，这里详细讨论一下。注册篇说到静态注册系统级应用可以在 manifest 的 '<intent-filter>' 设置优先级。这样在收集静态注册接收器的时候优先级高的能排在串行广播列表的前面，就会优先收到广播。但是从上面的处理流程来看，如果广播不是串行的（默认并行），那么动态注册的接收器优先级永远比静态注册的要高（并行处理的我们认为它们同一个时间接到广播）。
+
+这里可以稍微理解下 android 的设计： 虽然说并行广播的本意是让所有接收器一起响应。但是通过前面的分析知道，动态注册的进程都是已经启动起来了的；静态注册的进程基本上都还需要启动。动态切换换字体那篇工作小笔记分析 zygote 的时候知道，启动一个进程在 android 中是十分巨大的一个操作。而且如果静态注册的接收器的进程全都没有启动，那么就需要启动很多个进程。如果同时在后台启动这么多个进程，会造成系统响应严重顿卡。所以 android 广播的处理原则是（并行广播）：优先让动态注册的接收器处理广播，然后再让静态注册的接收器串行一个接着一个的处理（这样一次只会启动一个进程）。
+
+然后回来讨论优先级问题。静态注册的接收器按照 manifest 里声明的优先级排序。注册篇说到动态注册的接收器 IntentFilter 有一个 setPriority 可以设置（这个没限制系统应用才能设置），然后动态注册的时候 IntentResolver 也会根据这个优先级排序。前面说在并行广播中（默认）动态注册的接收器优先级肯定排在静态注册的前面，所以动态注册接收器的优先级在并行广播中用处不大。但是在串行广播中，动态注册的接收会合并到静态注册接收器的列表中（前面合有分析合并代码的）。这个时候动态注册接收器的优先级就有用了，合并操作对比动态注册接收器和静态注册接收器的优先级，然后决定动态注册接收器的插入位置（排在静态注册的前面还是后面）。
+
+最后总结一下，前面话太多不直观，来几点：
+
+1. 并行广播下，动态注册优先级 > 静态注册，静态注册按自己的优先级排序
+2. 串行广播下，动态注册和静态注册按各自的优先级一起排序
+
+## 总结
+
+经过注册篇和本篇的讲解能看得出，广播是集中由 AMS 来处理的：
+
+1. 通过 AMS 接口可以动态注册接收器到 AMS（存储在 AMS 中）
+2. 通过 manifest 声明可以静态注册，由 PMS 扫描（存储在 PMS 中）
+3. 通过 AMS 发送广播时，AMS 会收集（匹配）自己和 PMS 中的保存的接收器，获取接收器列表（BroadcastRecord）
+4. 将 BroadcastRecord 放入指定队列（前台 or 后台），执行广播队列（BroadcastQueue）处理
+5. 广播队列按照优先级将依次（或者并行）广播分发到接收器进程 BroadcastReceiver 回调
+
+前面还有一个讨论串行广播等待处理完成的问题（包括超时问题），鉴于本篇已经很长了，新开一篇来说吧。
 
 
 
