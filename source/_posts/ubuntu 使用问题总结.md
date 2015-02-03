@@ -75,5 +75,16 @@ ls -l /dev/disk/by-uuid
 
 这个时候可以用 sudo ntfsfix -d xx（xx 就是图中报错的那个 device： /dev/sdc3，这个用上面那个2个命令也可以看得到的）。一般来说输出修复成功就可以挂载了。如果还是实在不行，网上有人话说是因为 win8 的快速启动导致 ntfs 分区没有被 window 完全卸载导致的。实在不行，尝试把 win8 的快速启动关掉吧。
 
+## vpn 无法连接
+
+ubuntu 一安装好就可以直接新建 PPTP 方式的 vpn 的（点右上角的网络连接的 vpn 配置那里）。除了记得设置 Advanced 那里按下面的设置：
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/linux/ubuntu-memos/vpn-config-adv.png)
+
+把 IP、用户名和密码设置好后，一般就能连上了。不过有些时候有点蛋疼，怎么也连不上，刚开始以为是什么 vpn PPTP 的什么软件没装，搞了半天还是没用。后面无意发现设置 General 那里有一个 **允许所有用户连接** 的选项（默认一般是勾上的），不知道什么时候没勾上，勾上后就可以连了。
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/linux/ubuntu-memos/vpn-all-users.png)
+
+
 
 
