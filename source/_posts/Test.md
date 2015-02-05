@@ -324,6 +324,14 @@ frameworks/base/services/java/com/android/server/am/ServiceRecord.java
 </LinearLayout>
 ```
 
+**markdown origin table:** (en, the origin table format is render well)
+
+API | 存储位置 | 区域 | 特性
+----|----|----|----
+CreateMemDC | off-screen | 指定大小 | 我就是要写长一点一点一点点，哈哈
+CreateSubMemDC | off-screen | 指定大小 | 短一点
+
+
 **html table:** (en, the parser render bug ... ...)
 
 ---
