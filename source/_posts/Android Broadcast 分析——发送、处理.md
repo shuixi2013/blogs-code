@@ -31,6 +31,11 @@ frameworks/base/services/java/com/android/server/am/BroadcastRecord.java
 frameworks/base/services/java/com/android/server/pm/PackageManagerService.java
 ```
 
+然后把处理流程贴张图：
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/Broadcast-send/broadcast-send.png)
+(这个图很夸张吧，拉一下本篇的滚动条就知道为啥这么夸张了；本来想分情况画几张的，画到后面还是合在一起了)
+
 ## 发送接口
 
 ### 应用接口
@@ -2344,7 +2349,7 @@ IDLE(init) --> APP_RECEIVE(handle) --> IDLE(finish)
 
 然后后面处理下一个接收器就是和前面一样的了，然后直到 mOrderedBroadcasts 中没有待处理的接收器为止。这样就形成了静态注册接收器一个接一个的处理。不过细心的你应该发现了一点，这种实现有个很不靠谱的地方：那就是它要假设上一个接收器正常完成处理。那么如果上一个接收器在处理的过程中挂掉了，或是在处理的时候耗费了大量时间还没处理，是不是串行广播就没法发送到下一个接收器了呢。这个问题我们留在后面再讨论，我们得继续回去把静态注册接收器的第二种情况讨论完，再说这个问题（不然越扯越远，前面说的什么都忘记了）。
 
-占位图（有时间补个图先，不然字和代码太多头晕了）
+PS：头有点晕的回最开始看一下图。
 
 ### 接收器进程还没启动 
 
@@ -2526,7 +2531,7 @@ scheduleBroadcastsLocked();
 
 这是为了能然广播能够分发下去，当前的出错了就跳过去，然后面的继续执行。
 
-占位图（有时间补个图先，不然字和代码太多头晕了）
+PS：头有点晕的继续回最开始看一下图。
 
 ## 优先级问题
 
