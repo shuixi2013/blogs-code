@@ -52,6 +52,12 @@ archive: 2
 category: 2
 tag: 2
 
+# Sorting posts by
+## update: the 'updated' in post, use the 'date' if don't specified.
+## date: the 'date' field in post.
+## update-auto: the 'updated' in post, use system last modified time if don't specified.
+sort_by: updated
+
 # Server
 ## Hexo uses Connect as a server
 ## You can customize the logger format as defined in
