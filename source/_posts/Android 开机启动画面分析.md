@@ -1,5 +1,6 @@
 title: Android 开机启动画面分析
 date: 2015-01-28 19:46:16
+updated: 2015-01-28 19:46:16
 categories: [Android Framework]
 tags: [android]
 ---

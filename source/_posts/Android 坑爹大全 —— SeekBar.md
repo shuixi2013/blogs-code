@@ -1,5 +1,6 @@
 title: Android 坑爹大全 —— SeekBar
 date: 2015-01-26 23:48:16
+updated: 2015-01-26 23:48:16
 categories: [Android Development]
 tags: [android]
 ---

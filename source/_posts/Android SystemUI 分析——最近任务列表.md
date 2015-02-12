@@ -1,5 +1,6 @@
-title: Android 4.2 SystemUI 最近任务列表分析
-date: 2015-01-28 19:31:16
+title: Android SystemUI 分析——最近任务列表
+date: 2015-02-06 10:15:16
+updated: 2015-02-06 10:15:16
 categories: [Android Framework]
 tags: [android]
 ---

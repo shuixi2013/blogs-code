@@ -1,5 +1,6 @@
 title: (转) 如何在 github 上删除一个仓库
 date: 2015-01-31 19:56:16
+updated: 2015-01-31 19:56:16
 categories: [Other]
 tags: [other]
 ---

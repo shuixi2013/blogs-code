@@ -1,5 +1,6 @@
 title: MiniGUI DC 分析
 date: 2015-01-21 21:15:16
+updated: 2015-01-21 21:15:16
 categories: [MiniGUI]
 tags: [minigui]
 ---
@@ -64,125 +65,28 @@ MiniGUI 内部有一个叫 dc 池的缓冲区，启动 MiniGUI 的时候就分�
 
 * **API之间的对比：** 
 
-    * **GetDC**
-       * 存储位置： dc 池
-       * 像素数据类型： on-screen
-       * 包括区域： 整个窗体
-       * 特性： 
-
-    * **GetClientDC**
-       * 存储位置： dc 池
-       * 像素数据类型： on-screen
-       * 包括区域： 窗体的非客户区
-       * 特性： 
-
-    * **GetSubDC**
-       * 存储位置： dc 池
-       * 像素数据类型： 使用父 dc 的像素数据，但必须是 off-screen
-       * 包括区域： 参数指定大小，但无法超过父 dc 的大小
-       * 特性： 与父 dc 共用用一块像素地址，子 dc 的操作将会影响到父
-
-    * **CreateCompatibleDCEx**
-       * 存储位置： 动态内存
-       * 像素数据类型： off-screen
-       * 包括区域： 参数指定大小
-       * 特性： 创建的 dc，将会与传入的参考 dc 有相同的颜色格式。CreateCompatibleDC 是创建与参考 dc 同样大小的 dc，是对该 API 的简单封装
-
-    * **CreateMemDCEx**
-       * 存储位置： 动态内存
-       * 像素数据类型： off-screen
-       * 包括区域： 参数指定大小
-       * 特性： 能自己指定色深、颜色格式，以及初始的像素数据。CreateMemDC 创建的 dc 初始像素数据为0，是该 API 的简单封装
-
-    * **CreateSubMemDC**
-       * 存储位置： 动态内存
-       * 像素数据类型： 使用父dc的像素数据，应该是 off-screen 的吧
-       * 包括区域： 参数指定大小，但无法超过父 dc 的大小
-       * 特性： 参数指定是否与父 dc 具有相同的剪切域
-
-    * **CreatePrivateDC**
-       * 存储位置： 动态内存
-       * 像素数据类型： on-screen
-       * 包括区域： 整个窗体
-       * 特性： 
-
-    * **CreatePrivateClientDC**
-       * 存储位置： 动态内存
-       * 像素数据类型： on-screen
-       * 包括区域： 窗体的非客户区
-       * 特性： 好像是用于窗口或是控件的一个风格（WS_EX_USEPRIVATECDC、CS_OWNDC）
-
-    * **CreatePrivateSubDC**
-       * 存储位置： 动态内存
-       * 像素数据类型： 使用父 dc 的像素数据
-       * 包括区域： 参数指定大小，但无法超过父 dc 的大小
-       * 特性： 
-
-    * **GetPrivateClientDC**
-       * 存储位置： 已经存在的变量
-       * 像素数据类型： 应该是 on-screen
-       * 包括区域： 未知
-       * 特性： 简单的返回 PMAINWIN 的 privCDC 变量
-
-    * **CreateSecondaryDC**
-       * 存储位置： 动态内存
-       * 像素数据类型： off-screen
-       * 包括区域： 整个窗体
-       * 特性： 最后调用 CreateCompatibleDCEx 创建通过 GetDC 获取兼容的 dc
-
-    * **GetSecondaryDC**
-       * 存储位置： 不确定
-       * 像素数据类型： 应该是 on-screen
-       * 包括区域： 不确定
-       * 特性： 这个函数比较复杂，后面再分析
-
-    * **GetSecondaryClientDC**
-       * 存储位置： 
-       * 像素数据类型： 
-       * 包括区域： 
-       * 特性： 和 GetSecondaryDC 类似，只不过区域是非客户区而已
-
-    * **GetSecondarySubDC**
-       * 存储位置： dc 池 
-       * 像素数据类型： 应该是 off-screen 
-       * 包括区域： 参数指定大小，但无法超过父 dc 大小 
-       * 特性： 这个 API 主要是 secondary dc 的获取 sub dc 版
-
-    * **ReleaseDC**
-       * 存储位置： 释放 dc 池（只是简单设置标志位而已）
-       * 像素数据类型： on-screen 数据不能销毁
-       * 包括区域： 
-       * 特性： 从 dc 池创建的 dc，都应该由这个 API 释放
-
-    * **ReleaseSecondaryDC**
-       * 存储位置： 释放 dc 池
-       * 像素数据类型： 
-       * 包括区域： 
-       * 特性： 根据不同的情况调用 ReleaseDC 或是 ReleaseSecondarySubDC
-
-    * **ReleaseSecondarySubDC**
-       * 存储位置： 释放 dc 池
-       * 像素数据类型： 
-       * 包括区域： 
-       * 特性： 对 ReleaseDC 的简单封装
-
-    * **DeleteMemDC**
-       * 存储位置： 释放内存
-       * 像素数据类型： 销毁 off-screen 数据
-       * 包括区域： 
-       * 特性： 申请动态内存，使用 off-screen 像素数据的 dc 都应该由这个 API 销毁
-
-    * **DeletePrivateDC**
-       * 存储位置： 释放内存
-       * 像素数据类型： on-screen 数据不能销毁
-       * 包括区域： 
-       * 特性： 由 CreatePrivateDC 创建的 dc 要使用该 API 销毁
-
-    * **DeleteSecondaryDC**
-       * 存储位置： 
-       * 像素数据类型： 
-       * 包括区域： 
-       * 特性： 对 DeleteMemDC 的简单封装
+| API | 存储位置 | 像素数据类型 | 区域 | 特性 |
+|:----|:--------:|:-----------:|:----:|:----:|
+| GetDC | dc 池 | on-screen | 整个窗体 | |
+| GetClientDC | dc 池 | on-screen | 窗体的非客户区 | |
+| GetSubDC | dc 池 | 使用父 dc 的像素数据，但必须是 off-screen | 参数指定大小，但无法超过父 dc 的大小 | 与父 dc 共用用一块像素地址，子 dc 的操作将会影响到父 |
+| CreateCompatibleDCEx | 动态内存 | off-screen | 参数指定大小 | 创建的 dc，将会与传入的参考 dc 有相同的颜色格式。CreateCompatibleDC 是创建与参考 dc 同样大小的 dc，是对该 API 的简单封装 |
+| CreateMemDCEx | 动态内存 | off-screen | 参数指定大小 | 能自己指定色深、颜色格式，以及初始的像素数据。CreateMemDC 创建的 dc 初始像素数据为0，是该 API 的简单封装 |
+| CreateSubMemDC | 动态内存 | 使用父dc的像素数据，应该是 off-screen 的吧 | 参数指定大小，但无法超过父 dc 的大小 | 参数指定是否与父 dc 具有相同的剪切域 |
+| CreatePrivateDC | 动态内存 | on-screen | 整个窗体 | |
+| CreatePrivateClientDC | 动态内存 | on-screen | 窗体的非客户区 | 好像是用于窗口或是控件的一个风格（WS_EX_USEPRIVATECDC、CS_OWNDC） |
+| CreatePrivateSubDC | 动态内存 | 使用父 dc 的像素数据 | 参数指定大小，但无法超过父 dc 的大小 | |
+| GetPrivateClientDC | 已经存在的变量 | 应该是 on-screen | 未知 | 简单的返回 PMAINWIN 的 privCDC 变量 |
+| CreateSecondaryDC | 动态内存 | off-screen | 整个窗体 | 最后调用 CreateCompatibleDCEx 创建通过 GetDC 获取兼容的 dc |
+| GetSecondaryDC | 不确定 | 应该是 on-screen | 不确定 | 这个函数比较复杂，后面再分析 |
+| GetSecondaryClientDC |  |  |  | 和 GetSecondaryDC 类似，只不过区域是非客户区而已 |
+| GetSecondarySubDC | dc 池 | 应该是 off-screen | 参数指定大小，但无法超过父 dc 大小 | 这个 API 主要是 secondary dc 的获取 sub dc 版 |
+| ReleaseDC | 释放 dc 池（只是简单设置标志位而已） | on-screen 数据不能销毁 |  | 从 dc 池创建的 dc，都应该由这个 API 释放 |
+| ReleaseSecondaryDC | 释放 dc 池 |  |  | 根据不同的情况调用 ReleaseDC 或是 ReleaseSecondarySubDC |
+| ReleaseSecondarySubDC | 释放 dc 池 |  |  | 对 ReleaseDC 的简单封装 |
+| DeleteMemDC | 释放内存 | 销毁 off-screen 数据 |  | 申请动态内存，使用 off-screen 像素数据的 dc 都应该由这个 API 销毁 |
+| DeletePrivateDC | 释放内存 | on-screen 数据不能销毁 |  | 由 CreatePrivateDC 创建的 dc 要使用该 API 销毁 |
+| DeleteSecondaryDC |  |  |  | 对 DeleteMemDC 的简单封装 |
 
 * **情况复杂的API：** 
 GetSecondaryDC：这个函数首先分为是主窗口还是控件，其实再看主窗口或是控件的风格：

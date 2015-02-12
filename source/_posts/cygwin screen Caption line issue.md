@@ -1,5 +1,6 @@
 title: cygwin screen Caption line issue
 date: 2015-01-31 11:50:16
+updated: 2015-01-31 11:50:16
 categories: [Window]
 tags: [window]
 ---

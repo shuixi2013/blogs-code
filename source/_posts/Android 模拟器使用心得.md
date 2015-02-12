@@ -1,5 +1,6 @@
 title: Android 模拟器使用心得
 date: 2015-01-25 22:27:16
+updated: 2015-01-25 22:27:16
 categories: [Android Development]
 tags: [android]
 ---

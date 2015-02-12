@@ -1,5 +1,6 @@
 title: Linux 下 adb usb 连接 usb 设备问题总结
 date: 2015-01-25 22:39:16
+updated: 2015-01-25 22:39:16
 categories: [Android Development]
 tags: [android, linux]
 ---

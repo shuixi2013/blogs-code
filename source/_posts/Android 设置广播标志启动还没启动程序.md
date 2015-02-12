@@ -1,5 +1,6 @@
 title: Android 设置广播标志启动还没启动程序
 date: 2015-01-25 23:35:16
+updated: 2015-01-25 23:35:16
 categories: [Android Development]
 tags: [android]
 ---

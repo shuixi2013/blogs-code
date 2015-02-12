@@ -1,5 +1,6 @@
 title: Android Binder 分析——通信模型
 date: 2015-01-28 20:29:16
+updated: 2015-02-12 14:35:16
 categories: [Android Framework]
 tags: [android]
 ---

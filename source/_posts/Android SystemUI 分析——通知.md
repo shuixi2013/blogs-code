@@ -1,5 +1,6 @@
-title: Android Notification 分析——原理
+title: Android SystemUI 分析——通知
 date: 2015-02-06 10:17:16
+updated: 2015-02-09 09:15:16
 categories: [Android Framework]
 tags: [android]
 ---

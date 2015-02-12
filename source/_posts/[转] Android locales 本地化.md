@@ -1,5 +1,6 @@
 title: (转) Android locales 本地化
 date: 2015-01-27 23:37:16
+updated: 2015-01-27 23:37:16
 categories: [Android Framework]
 tags: [android]
 ---

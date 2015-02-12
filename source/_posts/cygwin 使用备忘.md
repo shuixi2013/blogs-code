@@ -1,5 +1,6 @@
 title: cygwin 使用备忘
 date: 2015-01-31 11:31:16
+updated: 2015-01-31 11:31:16
 categories: [Window]
 tags: [window]
 ---

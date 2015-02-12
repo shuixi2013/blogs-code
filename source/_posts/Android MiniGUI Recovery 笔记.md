@@ -1,5 +1,6 @@
 title: Android MiniGUI Recovery 笔记
 date: 2015-01-27 23:26:16
+updated: 2015-01-27 23:26:16
 categories: [Android Framework]
 tags: [android, minigui]
 ---

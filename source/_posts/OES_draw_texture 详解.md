@@ -1,5 +1,6 @@
 title: OES_draw_texture 详解
 date: 2015-01-31 16:58:16
+updated: 2015-01-31 16:58:16
 categories: [Other]
 tags: [opengl]
 ---

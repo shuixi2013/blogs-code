@@ -1,5 +1,6 @@
 title: Android Binder 分析——死亡通知（DeathRecipient）
 date: 2015-01-28 22:12:16
+updated: 2015-02-12 14:28:16
 categories: [Android Framework]
 tags: [android]
 ---

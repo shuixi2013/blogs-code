@@ -1,5 +1,6 @@
 title: dmtracedump 的用法
 date: 2015-01-26 23:35:16
+updated: 2015-01-26 23:35:16
 categories: [Android Development]
 tags: [android]
 ---

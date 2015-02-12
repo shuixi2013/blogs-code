@@ -1,5 +1,6 @@
 title: MiniGUI 自定义控件教程4
 date: 2015-01-20 17:35:16
+updated: 2015-01-20 17:35:16
 categories: [MiniGUI]
 tags: [minigui]
 ---

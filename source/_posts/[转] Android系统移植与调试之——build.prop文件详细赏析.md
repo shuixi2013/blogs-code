@@ -1,5 +1,6 @@
 title: (转) Android系统移植与调试之——build.prop文件详细赏析
 date: 2015-01-27 23:45:16
+updated: 2015-01-27 23:45:16
 categories: [Android Framework]
 tags: [android]
 ---

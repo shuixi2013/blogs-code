@@ -1,5 +1,6 @@
 title: Android 坑爹大全 —— Paint mask filter 无效
 date: 2015-01-26 23:53:16
+updated: 2015-01-26 23:53:16
 categories: [Android Development]
 tags: [android]
 ---

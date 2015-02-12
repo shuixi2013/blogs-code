@@ -1,5 +1,6 @@
 title: EFI 安装系统
 date: 2015-01-31 11:55:16
+updated: 2015-01-31 11:55:16
 categories: [Other]
 tags: [window, linux, install]
 ---

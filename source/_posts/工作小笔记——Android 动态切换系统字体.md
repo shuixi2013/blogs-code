@@ -1,5 +1,6 @@
 title: 工作小笔记——Android 动态切换系统字体
 date: 2015-01-31 10:19:16
+updated: 2015-01-31 10:19:16
 categories: [Android Framework]
 tags: [android]
 ---

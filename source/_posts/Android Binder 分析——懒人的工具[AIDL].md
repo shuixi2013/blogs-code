@@ -1,5 +1,6 @@
 title: Android Binder 分析——懒人的工具（AIDL）
 date: 2015-01-28 21:53:16
+updated: 2015-02-12 14:28:16
 categories: [Android Framework]
 tags: [android]
 ---

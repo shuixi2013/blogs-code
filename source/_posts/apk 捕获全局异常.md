@@ -1,5 +1,6 @@
 title: apk 捕获全局异常
 date: 2015-01-26 23:11:16
+updated: 2015-01-26 23:11:16
 categories: [Android Development]
 tags: [android]
 ---

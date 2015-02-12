@@ -1,5 +1,6 @@
 title: Android 一些有意思的命令小工具 —— service
 date: 2015-01-30 16:32:16
+updated: 2015-01-30 16:32:16
 categories: [Android Framework]
 tags: [android]
 ---

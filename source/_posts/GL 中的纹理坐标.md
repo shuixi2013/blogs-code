@@ -1,5 +1,6 @@
 title: GL 中的纹理坐标
 date: 2015-01-31 17:07:16
+updated: 2015-01-31 17:07:16
 categories: [Other]
 tags: [opengl]
 ---

@@ -1,5 +1,6 @@
 title: (转) Android 开发环境搭建全程演示（jdk+eclipse+android sdk）
 date: 2015-01-25 22:08:16
+updated: 2015-01-25 22:08:16
 categories: [Android Development]
 tags: [android, install]
 ---

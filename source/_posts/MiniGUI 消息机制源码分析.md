@@ -1,5 +1,6 @@
 title: MiniGUI 消息机制源码分析
 date: 2015-01-21 21:07:16
+updated: 2015-01-21 21:07:16
 categories: [MiniGUI]
 tags: [minigui]
 ---

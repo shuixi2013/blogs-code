@@ -1,5 +1,6 @@
 title: (转) Nexus7 2rd unlock fastboot
 date: 2015-01-31 11:00:16
+updated: 2015-01-31 11:00:16
 categories: [Android Framework]
 tags: [android]
 ---

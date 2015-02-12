@@ -1,5 +1,6 @@
 title: reinterpret_cast、static_cast 和 dynamic_cast 的区别
 date: 2015-01-19 10:38:16
+updated: 2015-01-19 10:38:16
 categories: [Basics Knowledge]
 tags: [basics]
 ---

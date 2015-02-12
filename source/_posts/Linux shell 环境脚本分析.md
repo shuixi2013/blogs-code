@@ -1,5 +1,6 @@
 title: Linux shell 环境脚本分析
 date: 2015-01-13 20:50:16
+updated: 2015-01-13 20:50:16
 categories: [Linux]
 tags: [linux, shell]
 ---

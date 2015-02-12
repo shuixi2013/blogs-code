@@ -1,5 +1,6 @@
 title: Android 智能指针备忘
 date: 2015-01-28 20:12:16
+updated: 2015-01-28 20:12:16
 categories: [Android Framework]
 tags: [android]
 ---

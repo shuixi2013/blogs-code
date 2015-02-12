@@ -1,5 +1,6 @@
 title: 提取 OEM window key
 date: 2015-01-31 15:55:16
+updated: 2015-01-31 15:55:16
 categories: [Window]
 tags: [window]
 ---

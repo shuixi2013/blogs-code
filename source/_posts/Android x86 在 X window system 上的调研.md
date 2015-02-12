@@ -1,5 +1,6 @@
 title: Android x86 在 X window system 上的调研
 date: 2015-01-27 23:14:16
+updated: 2015-01-27 23:14:16
 categories: [Android Framework]
 tags: [android]
 ---

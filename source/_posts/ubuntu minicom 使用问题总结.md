@@ -1,5 +1,6 @@
 title: ubuntu minicom 使用问题总结
 date: 2015-01-19 09:57:16
+updated: 2015-01-19 09:57:16
 categories: [Linux]
 tags: [linux]
 ---

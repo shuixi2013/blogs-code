@@ -1,5 +1,6 @@
 title: Android中 Error generating final archive Debug Certificate expired on xx 的错误
 date: 2015-01-25 22:49:16
+updated: 2015-01-25 22:49:16
 categories: [Android Development]
 tags: [android]
 ---

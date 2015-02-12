@@ -1,5 +1,6 @@
 title: (转) Android 让应用手动管理应用的数据目录
 date: 2015-01-26 22:58:16
+updated: 2015-01-26 22:58:16
 categories: [Android Development]
 tags: [android]
 ---

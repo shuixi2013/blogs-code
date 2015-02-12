@@ -1,5 +1,6 @@
 title: 使用 pkg-config
 date: 2015-01-19 09:51:16
+updated: 2015-01-19 09:51:16
 categories: [Linux]
 tags: [linux, shell]
 ---

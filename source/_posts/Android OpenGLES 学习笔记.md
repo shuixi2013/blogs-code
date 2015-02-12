@@ -1,5 +1,6 @@
 title: Android OpenGLES 学习笔记
 date: 2015-01-25 23:28:16
+updated: 2015-01-25 23:28:16
 categories: [Android Development]
 tags: [android, opengl]
 ---

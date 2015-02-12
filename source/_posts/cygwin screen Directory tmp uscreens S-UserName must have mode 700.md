@@ -1,5 +1,6 @@
 title: cygwin screen Directory tmp uscreens S-UserName must have mode 700
 date: 2015-01-31 11:49:16
+updated: 2015-01-31 11:49:16
 categories: [Window]
 tags: [window]
 ---

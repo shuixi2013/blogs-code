@@ -1,5 +1,6 @@
 title: (转) 什么是 VSync
 date: 2015-01-31 19:36:16
+updated: 2015-01-31 19:36:16
 categories: [Basics Knowledge]
 tags: [basics]
 ---

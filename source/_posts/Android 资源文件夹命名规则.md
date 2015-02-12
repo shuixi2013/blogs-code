@@ -1,5 +1,6 @@
 title: Android 资源文件夹命名规则
 date: 2015-01-25 23:34:16
+updated: 2015-01-25 23:34:16
 categories: [Android Development]
 tags: [android]
 ---

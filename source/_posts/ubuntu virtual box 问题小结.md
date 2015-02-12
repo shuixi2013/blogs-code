@@ -1,5 +1,6 @@
 title: ubuntu virtual box 问题小结
 date: 2015-01-19 10:14:16
+updated: 2015-01-19 10:14:16
 categories: [Linux]
 tags: [linux]
 ---

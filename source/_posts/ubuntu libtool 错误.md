@@ -1,5 +1,6 @@
 title: ubuntu libtool 错误
 date: 2015-01-19 10:01:16
+updated: 2015-01-19 10:01:16
 categories: [Linux]
 tags: [linux]
 ---

@@ -1,5 +1,6 @@
 title: (转) Java 的模版和 C++ 模版的区别
 date: 2015-01-31 19:38:16
+updated: 2015-01-31 19:38:16
 categories: [Basics Knowledge]
 tags: [basics]
 ---

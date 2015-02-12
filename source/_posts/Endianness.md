@@ -1,5 +1,6 @@
 title: Endianness
 date: 2015-01-19 20:18:16
+updated: 2015-01-19 20:18:16
 categories: [Basics Knowledge]
 tags: [basics]
 ---

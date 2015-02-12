@@ -1,5 +1,6 @@
 title: ubuntu 10.10 安装 jdk
 date: 2015-01-19 09:59:16
+updated: 2015-01-19 09:59:16
 categories: [Linux]
 tags: [linux, install]
 ---
@@ -14,7 +15,7 @@ deb  http://archive.canonical.com/ubuntu maverick partner
     * 值得注意的是，默认ubuntu10.10已经安装了open-JDK 可以使用java -version命令查看，当前默认使用的JDK是哪个类型的。如果直接卸载了openJDK软件包，再使用java -version命令，系统还是使用的open-JDK，这时需要修改ubuntu默认使用JDK的配置，配置默认Java使用哪个
 
 <pre>
-sudo update-alternatives –config java  
+sudo update-alternatives –config java
 </pre>
 
 选择“2”，再查看系统使用java的版本。注意：wordpress不好的地方就是在写代码时，经常会修改代码里的内容，上面在sudo update-alternatives –config java这句，config前面是两个“-”,wordpress会显示为一个长“-”。
