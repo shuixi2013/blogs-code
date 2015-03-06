@@ -1,6 +1,6 @@
 title: Android Binder 分析——数据传递者（Parcel）
 date: 2015-01-28 20:41:16
-updated: 2015-02-12 14:34:16
+updated: 2015-03-31 14:34:16
 categories: [Android Framework]
 tags: [android]
 ---

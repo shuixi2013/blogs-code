@@ -1,6 +1,6 @@
 title: Android Binder 分析——匿名共享内存（Ashmem）
 date: 2015-01-28 21:00:16
-updated: 2015-02-12 14:33:16
+updated: 2015-03-31 14:33:16
 categories: [Android Framework]
 tags: [android]
 ---

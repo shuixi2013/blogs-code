@@ -50,3 +50,4 @@ add-resource type="xx" name="xx"
 LOCAL_AAPT_FLAGS := --auto-add-overlay
 </pre>
 
+

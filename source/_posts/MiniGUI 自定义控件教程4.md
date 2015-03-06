@@ -150,5 +150,5 @@ MiniGUI原来的Button是只要在控件客户区弹起鼠标左键才会发送�
 参考资料：飞漫MiniGUI编程指南2.0.4
  
 ## 代码下载
-[下载地址]("http://download.csdn.net/detail/mingming_killer/4045894")
+[下载地址](http://download.csdn.net/detail/mingming_killer/4045894)
 

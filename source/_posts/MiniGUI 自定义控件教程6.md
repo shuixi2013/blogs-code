@@ -108,5 +108,5 @@ DrawText 是在给定的一个RECT空间内按照预定的几种对齐格式进�
 参考资料：飞漫MiniGUI编程指南2.0.4
 
 ## 代码下载
-[下载地址]("http://download.csdn.net/detail/mingming_killer/4045894")
+[下载地址](http://download.csdn.net/detail/mingming_killer/4045894)
 
