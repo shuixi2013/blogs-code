@@ -25,6 +25,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         implements Watchdog.Monitor, BatteryStatsImpl.BatteryCallback {
 ... ...
 
+	// USS 属于 AMS
     /*
      * information about component usage
      */
@@ -46,6 +47,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                 : mBatteryStatsService.getActiveStatistics().getIsOnBattery();
         mBatteryStatsService.getActiveStatistics().setCallback(this);
 
+		// 在 AMS 的构造函数被 new 出来
+		// 这个 systemDir 从来上面代码来看是： /data/system，所以传给 USS 的目录是 /data/system/usagestats
         mUsageStatsService = new UsageStatsService(new File(
                 systemDir, "usagestats").toString());
         mHeadless = "1".equals(SystemProperties.get("ro.config.headless", "0"));
@@ -56,6 +59,7 @@ public final class ActivityManagerService extends ActivityManagerNative
 
 ... ...
 
+	// 前面 Binder SS 篇有说到 SS 初始化的时候会调用 AMS 的 main 函数的
     public static final Context main(int factoryTest) {
         AThread thr = new AThread();
         thr.start();
@@ -79,6 +83,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         m.mFactoryTest = factoryTest;
         m.mMainStack = new ActivityStack(m, context, true);
 
+		// 调用 USS 的 publish 函数
         m.mBatteryStatsService.publish(context);
         m.mUsageStatsService.publish(context);
     
@@ -108,6 +113,7 @@ public final class UsageStatsService extends IUsageStats.Stub {
 
     public void publish(Context context) {
         mContext = context;
+		// 向 SM 注册自己
         ServiceManager.addService(SERVICE_NAME, asBinder());
     }
 
@@ -115,11 +121,15 @@ public final class UsageStatsService extends IUsageStats.Stub {
 }
 ```
 
+这里如果有个我写的 Binder 系列那些知识的话是很简单的，SS 启动 AMS，然后 AMS 创建 USS，再调用 USS 的 publish 向 SM 注册 USS，这样 framework 中的各个模块（原生的 USS 不对第三方应用开放接口的）就能通过 SM 调用 USS 提供的 IPC 接口了。那我们也清楚了 USS 是在 AMS 初始化的时候启动的。
+
 ### 数据结构
 
 ### 统计埋点
 
 ### 保存数据
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/Worknote-usagestats/usage-data.png)
 
 ## 改造
 

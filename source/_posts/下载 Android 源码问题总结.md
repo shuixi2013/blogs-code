@@ -17,12 +17,30 @@ find . -iname tmp_pack_* | xargs rm
 
 ## mirror 缺少某一个仓库
 
-google 的人感觉有些时候也会犯一些错误。在使用最近新下载的 5.0 mirror 的时候报某几个仓库不存在。打开 mirror 的 .repo/manifests/default.xml 和指定 android 版本的（5.0.2-r2）的仓库的 .repo/manifests/default.xml 对比，发现 mirror 确实少了一些仓库。感觉应该是 google 的漏了几个仓库吧。不过还好我以前 4.4 的 mirror 还没删掉，去 4.4 的 mirror 的 .repo/manifests/default.xml 能找到缺少仓库以前的地址和分支，照着地址去 gogole 的源码服务器看一下，发现 git 仓库还在，那应该是漏写在 repo 的 xml 里面了。
+google 的人感觉有些时候也会犯一些错误。在使用最近新下载的 5.0 mirror 的时候报某几个仓库不存在。打开 mirror 的 .repo/manifests/default.xml 和指定 android 版本的（5.0.2-r1）的仓库的 .repo/manifests/default.xml 对比，发现 mirror 确实少了一些仓库。感觉应该是 google 的漏了几个仓库吧。不过还好我以前 4.4 的 mirror 还没删掉，去 4.4 的 mirror 的 .repo/manifests/default.xml 能找到缺少仓库以前的地址和分支，照着地址去 gogole 的源码服务器看一下，发现 git 仓库还在，那应该是漏写在 repo 的 xml 里面了。
 
-那咋们还是有曲线救国的方法的：找出缺少的仓库后，然后去 4.4 的 mirror 的 .repo/manifests/default.xml 依葫芦画瓢的把地址和分支抄过来，然后再在 5.0 的仓库中 repo sync 一下就下载到缺少的仓库了。当然既然 4.4 的 mirror 还在，还可以利用下以前下载好的资源，可以去 4.4 的 mirror 把缺少的仓库整个 .git 文件夹 copy 到 5.0 的 mirror 对应的路径下。我发现 5.0 缺少的这几个仓库，好像和 4.4 是一样的，repo sync 并没多下载东西。 
+那咋们还是有曲线救国的方法的：找出缺少的仓库后，然后去 4.4 的 mirror 的 .repo/manifests/default.xml 依葫芦画瓢的把地址和分支抄过来，然后再在 5.0 的仓库中 repo sync 一下就下载到缺少的仓库了。当然既然 4.4 的 mirror 还在，还可以利用下以前下载好的资源，可以去 4.4 的 mirror 把缺少的仓库整个 .git 文件夹 copy 到 5.0 的 mirror 对应的路径下。我发现 5.0 缺少的这几个仓库，好像和 4.4 是一样的，repo sync 并没多下载东西。下面附上我找到的 5.0.2-r1 缺少 git 仓库：
+
+<pre>
+platform/bootable/bootloader/legacy.git
+platform/external/arduino.git
+platform/external/chromium_org/third_party/openssl.git
+platform/external/gcc-demangle.git
+platform/external/google-diff-match-patch.git
+platform/external/openfst.git
+platform/external/qemu.git
+platform/external/qemu-pc-bios.git
+platform/external/smack.git
+platform/external/stressapptest.git
+platform/external/yaffs2.git
+platform/prebuilts/gcc/darwin-x86/mips/mipsel-linux-android-4.8.git
+platform/prebuilts/gcc/darwin-x86/mips/mips64el-linux-android-4.8.git
+platform/prebuilts/gcc/linux-x86/mips/mipsel-linux-android-4.8.git
+platform/prebuilts/gcc/linux-x86/mips/mips64el-linux-android-4.8.git
+platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.11-4.6.git
+platform/tools/tradefederation.git
+</pre>
 
 既然我们可以手动修复 mirror 缺少 git 仓库的问题，这里又引申出解决另外一个问题的办法。就是前面说的 git 仓库下载中断，又要从头开始下，如果 VPN 或是网络不稳定，下载某些很大的 git 仓库会十分痛苦，但是某些 git 仓库其实你并不会用到。例如上面说的那个 lg 的 kernel 的 git 仓库，有 10G 左右，但是如果你的 nexus 设备并不是 lg 的话，根本不需要这个仓库。所以如果实在下不下来的话，可以在 mirror 的 .repo/manifests/default.xml 中删掉这个 git 仓库。
-
-（回去补一下整理的 5.0 的 mirror 缺少的仓库 ... ...）
 
 
