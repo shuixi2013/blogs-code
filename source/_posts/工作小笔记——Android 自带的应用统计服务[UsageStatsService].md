@@ -1,6 +1,6 @@
 title: 工作小笔记——Android 自带的应用统计服务（UsageStatsService）
 date: 2015-01-31 10:33:16
-updated: 2015-03-07 17:27:16
+updated: 2015-03-31 17:27:16
 categories: [Android Framework]
 tags: [android]
 ---
@@ -17,6 +17,13 @@ frameworks/base/services/java/com/android/server/am/ActivityRecord.java
 # WMS 相关
 frameworks/base/services/java/com/android/server/wm/WindowManagerService.java
 frameworks/base/services/java/com/android/server/wm/AppWindowToken.java
+
+# Parcel 相关
+frameworks/base/core/java/android/os/Parcel.java
+frameworks/base/jni/android_os_Parcel.cpp
+
+frameworks/native/libs/binder/Parcel.cpp
+frameworks/native/include/utils/Unicode.h
 ```
 
 ## UsageStatsService
@@ -359,9 +366,9 @@ Date: history.xml (old data version)
 
 其实所有的统计流程基本上都是一样的，定下要统计的数据结构，下面就是埋点，然后上报数据，最后服务端保存数据。前面说了埋点是在 AMS 里面的。这里先看看 USS 提供给 AMS 的埋点接口，一共三个：
 
-* noteResumeComponent: 通知有组件跑了 Resume 生命周期
-* notePauseComponent: 通知有组件跑了 Pause 生命周期
-* noteLaunchTime: 通知组件的启动时间
+* **noteResumeComponent:** 通知有组件跑了 Resume 生命周期
+* **notePauseComponent:** 通知有组件跑了 Pause 生命周期
+* **noteLaunchTime:** 通知组件的启动时间
 
 下面我们一个一个看：
 
@@ -1352,8 +1359,25 @@ Resume 的埋点在 AMS 的 ActivityStack（AS） 的 completeResumeLocked 中�
 
 上面 AWP 的 updateReportedVisibilityLocked 在 WMS 中也是有很多地方会调用的，例如 relayoutWindow、开始窗口变化动画等等地方。从这里可以看得出，USS 中统计 activity 启动需要的时间，是从发起 startActivity 请求（startSpecificActivityLocked）开始，直到对应 activity 的窗口开始绘制（窗口可见）这段时间。
 
+#### AMS 小分析
 
-这里算是把3个接口的埋点分析完了，AMS 和 WMS 真的是太复杂了，从代码上看很费劲。最后上一个官方 sdk doc 上的 activity 的生命周期图，结合上面埋点的分析，对 android 对 activity 生命周期实现、管理有更加深入的理解：
+这里算是把3个接口的埋点分析完了。本来说 AMS 和 WMS 太复杂了，留给以后再慢慢来看，但是没忍住还是稍微把 startActivity 的一般流程分析了一下，来一张图：
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/Worknote-usagestats/startActivity.png)
+
+这里就不上代码解说了，这篇已经够长了，看看图差不多大概明白流程是怎么回事了。图中我画了比较常见的3种情况（所有情况没画全，太多分支了）：
+
+* **branch1:** 
+要 launch 的 activity 进程不存在。其中 mResumedActivity 代表之前有没有处于 Resume 状态的 activity，有的话要先那个变成 Pause 状态（一般都有，没有的情况就是刚开机 launch 桌面的时候，排除第一次开机那个 Provision，桌面是第一 launch 的 activity）。这种情况需要先让 Zygote fork 出对应的进程，然后等待进程启动后，调用 AMS 的 attachApplication 接口继续跑后面的流程（前面的 Service、Broadcast 都有类似的过程了）。
+
+* **branch2:** 
+要 launch 的 activity 进程已经存在，但是不存在对应的 TaskRecord(ActivityRecord)，launch 了 activity 在 AMS 中对应就有保存有 ActivityRecord（AR），但是如果调用 finishActivity（onDestroy）会销毁 ActivityRecord，典型的情况按 back 键返回。这种情况和 branch1 AMS attchApplication 接口后面的流程是一样的，就是不需要等待 Zygote fork 进程而已。
+
+* **branch3:**
+要 launch 的 activity 进程已经，并且存在对应的 TaskRecord(ActivityRecord)，最典型的情况就是按 home 键回桌面。这种情况先把对应的 Task 移动到前台，然后让 activity 走下 Resume 流程就行了。
+
+
+上面我把我们开发应用熟悉的 activity 的那几个生命周期回调用红色标了出来，上面的埋点函数用紫色的标了一下，大家可以对比前面的解说再好好看看。最后上一个官方 sdk doc 上的 activity 的生命周期图，对 android activity 生命周期实现、管理有更加深入的理解：
 
 ![](http://7u2hy4.com1.z0.glb.clouddn.com/android/Worknote-usagestats/activity_lifecycle.png)
 
@@ -1365,19 +1389,694 @@ Resume 的埋点在 AMS 的 ActivityStack（AS） 的 completeResumeLocked 中�
 
 * <font color="#ff0000">The foreground lifetime</font> of an activity happens between a call to **onResume()** until a corresponding call to **onPause()**. During this time the activity is in front of all other activities and interacting with the user. An activity can frequently go between the resumed and paused states -- for example when the device goes to sleep, when an activity result is delivered, when a new intent is delivered -- so the code in these methods should be fairly lightweight. 
 
-从 onCreate 到 onDestroy 算是 activity 的所有时间，从 onStart 到 onStop 算是 activity 处于可见的时间，从 onResume 到 onPause 算是 activity 的处于前台的时间。这里比较迷惑的是可见时间和处于前台的时候。这里稍微说明下，所谓处于前台是处于当前 activity 堆栈（AS）的最顶部，能够接收输入焦点，例如说正在交互的 activity。那所谓的可见时间呢，其实有些时候就算 activity 不在 AS 的最顶部，也是可见的，最典型的情况上当前正在交互的 activity 是个半透明的，所以它下面那个 activity 是可见的，但是不处于前台（处于 onPause 状态，但是没还到 onStop 状态）。所以上面的图，可见时间比前台时间要长就是这个原因。从这个来看 USS 统计的启动时长，感觉像是从 onCreate 到 onStart 那段时间。
+从 onCreate 到 onDestroy 算是 activity 的存在时间，从 onStart 到 onStop 算是 activity 处于可见的时间，从 onResume 到 onPause 算是 activity 的处于前台的时间。这里比较迷惑的是可见时间和处于前台的时候。这里稍微说明下，所谓处于前台是处于当前 activity 堆栈（AS）的最顶部，能够接收输入焦点，例如说正在交互的 activity。那所谓的可见时间呢，其实有些时候就算 activity 不在 AS 的最顶部，也是可见的，最典型的情况上当前正在交互的 activity 是个半透明的，所以它下面那个 activity 是可见的，但是不处于前台（处于 onPause 状态，但是没还到 onStop 状态）。所以上面的图，可见时间比前台时间要长就是这个原因。从这个来看 USS 统计的启动时长，感觉像是从 onCreate 到 onStart 那段时间。我本来还以为 onStart 要涉及 WMS，等待窗口开始绘制才会调用的，但是好像并不是我想的那样，就是在 onCreate 后几句就调用 onRestart，不过在 onStop 后还是有区别的，在 activity 的存在周期，onCreate 只会调用一次，但是 onStart 可能会有多次。
+
+
+还有上面 onStop 这个回调的时间很有意思，官方的解说是： activity no longer visible。怎么才算 no longer visible ？？ 看上面的流程图会发现，当 activity 开始 Pasuing 流程的时候，AR 会保存到一个叫 mStopActivites 的列表中（进行 Resume 的时候会从里面删掉自己）。然后当一个 activity 的主线程（UI 线程）的 Handler 的消息队列（MessageQueue）为空的时候会激发一个 IdlerHandler 的回调（每个程序的 ActivityThread 会设置这个回调），它会向 AMS 报告 activity idle 消息，在 idle 消息处理中会查看 mStopActivites 中哪里 AR 可以进入 Stop 状态（进入之后会从 mStopActivites 中删除，AMS 的 idle 处理还有别的工作要做，这里只说 stop 处理）。其实激发 AMS activity idle 的地方还有别的地方，但是 Handler idle 是一个比较典型的地方。我说之前看到 Handler 的 MessageQueue 那有个啥 idle handler 的处理，不知道干什么，现在知道了。
+
+所以这里可以知道一个比较好玩的东西，就是 android 认为 UI 线程的消息队列为空，就代表这个 activity 空闲了。其实这个设定也是合理的因为上层的应用交互都是基于消息队列驱动的。然后也明白了 no longer 是要等 activity 的 UI 线程的消息队列为空。以后有空把 Handler、Looper、MessageQueue 也好好整理分析下。
 
 ### 保存数据
 
+上面扯了一下 AMS 相关的流程（因为 USS 埋点要在 AMS 里面埋），现在回来把数据保存说一下。前面在说数据结构那，把 USS 保存过的数据 dump 出来了，然后它的结构就是一个 Map，以 pkg 为 key，一个 pkg 一条。然后每条里面有一个 TimeStats 的东西，又包含了一个 HashMap 以 ComponentName 为 key，一个 component 一条，所以从逻辑上来说内存结构应该是这样的（前面 dump 出来的数据也很直观了）：
+
+pkg1:
+  component1: xx xx xx xx
+  component2: xx xx xx xx
+  component3: xx xx xx xx
+pkg2:
+  component1: xx xx xx xx
+pkg3:
+  component1: xx xx xx xx
+  component2: xx xx xx xx
+... ...
+
+这里的保存，就是要把内存中的这些数据写到文件中。看到这个，在 android 中你就要想到 Parcel 要出场了。其实前面说数据结构的时候，就看到 PkgUsageStatsExtended 和 TimeStats 都有对应的 Parcelable 的函数（倒回去看一下）。先把这些说清楚，后面看起保存数据的代码就简单了。在上面埋点统计那，notePauseComponent 和 noteLaunchTime 会调用有一个函数 writeStatsToFile（代码不算太长，一次性贴完了）：
+
+```java
+// ======================== UsageStatsService.java =========================
+
+    private static final String FILE_PREFIX = "usage-";
+
+    private static final int FILE_WRITE_INTERVAL = 30*60*1000; //ms
+
+... ...
+
+    private Calendar mCal; // guarded by itself
+
+    // java 的 Atomic 系列，能够保证访问、修改的原子性，也后可以也学学该怎么用这些东西
+    private final AtomicInteger mLastWriteDay = new AtomicInteger(-1);
+    private final AtomicLong mLastWriteElapsedTime = new AtomicLong(0);
+    private final AtomicBoolean mUnforcedDiskWriteRunning = new AtomicBoolean(false);
+
+... ...
+
+    // 这个函数就是把 USS 统计数据写入文件保存的函数
+    // 2个 boolean 参数，是否强制写入。虽然上面埋点那会调用这个函数，但是不是每次调用都会写文件，
+    // USS 有一个保存策略的，代码看代码再具体说这个策略。当然可以传 true 无视这个策略。
+    /*
+     * Conditionally start up a disk write if it's been awhile, or the
+     * day has rolled over.
+     *
+     * This is called indirectly from user-facing actions (when
+     * 'force' is false) so it tries to be quick, without writing to
+     * disk directly or acquiring heavy locks.
+     *
+     * @params force  do an unconditional, synchronous stats flush
+     *                to disk on the current thread.
+     * @params forceWriteHistoryStats Force writing of historical stats.
+     */
+    private void writeStatsToFile(final boolean force, final boolean forceWriteHistoryStats) {
+        int curDay;
+        // 前面注释也有说用的时候要自己注意同步锁
+        synchronized (mCal) {
+            mCal.setTimeInMillis(System.currentTimeMillis());
+            curDay = mCal.get(Calendar.DAY_OF_YEAR);
+        }    
+        // 取当前的时候和最后一次保存的时间对比，看看是不是同一天
+        final boolean dayChanged = curDay != mLastWriteDay.get();
+
+        // Determine if the day changed...  note that this will be wrong
+        // if the year has changed but we are in the same day of year...
+        // we can probably live with this.
+        final long currElapsedTime = SystemClock.elapsedRealtime();
+
+        // 如果没有强制保存的话，这里就会应用一个保存策略：
+        // 一天保存一次（dayChanged），并且本次保存要和上一次保存的间隔超过 FILE_WRITE_INTERVAL（30分钟）
+        // 不满足的话直接返回，满足的话开一个线程来写（线程里面调用自己是强制写的）。
+        // 不过我太不喜欢 java 这样随手匿名 new 一个线程就 run。
+        // Fast common path, without taking the often-contentious
+        // mFileLock.
+        if (!force) {
+            if (!dayChanged &&
+                (currElapsedTime - mLastWriteElapsedTime.get()) < FILE_WRITE_INTERVAL) {
+                // wait till the next update
+                return;
+            }
+            if (mUnforcedDiskWriteRunning.compareAndSet(false, true)) {
+                new Thread("UsageStatsService_DiskWriter") {
+                    public void run() {
+                        try {
+                            if (localLOGV) Slog.d(TAG, "Disk writer thread starting.");
+                            writeStatsToFile(true, false);
+                        } finally {
+                            mUnforcedDiskWriteRunning.set(false);
+                            if (localLOGV) Slog.d(TAG, "Disk writer thread ending.");
+                        }
+                    }
+                }.start();
+            }
+            return;
+        }
+
+        // 满足上面的策略判断后就开始写文件。
+        // 这里用的锁是专门用来锁读、写文件的，前面访问数据的用的是另外一个。
+        // 访问内存数据和读写文件分开锁，能提供并发能力
+        synchronized (mFileLock) {
+            // 这里是获取最近保存一次的文件名，其实就是： FILE_PREFIX+当前的日期，
+            // 类似这样的： usage-2015-03-06，具体代码不贴了
+            // Get the most recent file
+            mFileLeaf = getCurrentDateStr(FILE_PREFIX);
+            // Copy current file to back up
+            File backupFile = null;
+            // 如果上一次保存过的文件在，那么先把上次的文件重命名为 xx.bak
+            // 后面如果写文件失败，会再把原文件改个名字还远回去，这种做法值得学习
+            if (mFile != null && mFile.exists()) {
+                backupFile = new File(mFile.getPath() + ".bak");
+                if (!backupFile.exists()) {
+                    if (!mFile.renameTo(backupFile)) {
+                        Slog.w(TAG, "Failed to persist new stats");
+                        return;
+                    }
+                } else {
+                    mFile.delete();
+                }
+            }
+
+            try {
+                // 具体写的内容在下面这个函数中
+                // Write mStats to file
+                writeStatsFLOCK(mFile);
+                // 保存最后一次写文件的时间
+                mLastWriteElapsedTime.set(currElapsedTime);
+                // 如果日期变更的话，成功把当前数据写入文件后，会清除当前的数据
+                // 也就是说文件中保存的数据就是一天的统计情况（怪不得以一天的日期来命名）
+                if (dayChanged) {
+                    mLastWriteDay.set(curDay);
+                    // clear stats
+                    synchronized (mStats) {
+                        mStats.clear();
+                    }
+                    // 这个 mDir USS 初始化的时候 AMS 传递进来过的，
+                    // 保存数据的路径是： /data/system/usagestats
+                    mFile = new File(mDir, mFileLeaf);
+                    // 检测下保存的文件数量（默认的 USS 只保存最近5天的文件）
+                    checkFileLimitFLOCK();
+                }
+
+                // 那个历史记录的这里不管先
+                if (dayChanged || forceWriteHistoryStats) {
+                    // Write history stats daily, or when forced (due to shutdown).
+                    writeHistoryStatsFLOCK(mHistoryFile);
+                }
+
+                // 文件成功写入后，把之前的 .bak 文件删掉
+                // Delete the backup file
+                if (backupFile != null) {
+                    backupFile.delete();
+                }
+            } catch (IOException e) {
+                Slog.w(TAG, "Failed writing stats to file:" + mFile);
+                // 如果写入文件失败，把 .bak 改个名字还远回去
+                if (backupFile != null) {
+                    mFile.delete();
+                    backupFile.renameTo(mFile);
+                }
+            }
+        }
+        if (localLOGV) Slog.d(TAG, "Dumped usage stats.");
+    }
+
+
+    private void writeStatsFLOCK(File file) throws IOException {
+        // 这里的流程是这样的，可以学习在 android 上怎么比较好的保存文件：
+        // 1. 从一个存储介质路径创建一个 File 对象
+        // 2. 从 File 文件中创建 java 输出流对象（FOS）
+        // 3. new 一个 Parcel（下面的 Parcel.obtain 会有缓存效果）
+        // 4. 拿 Parcel 给实现了 Parcelable 接口的对象打包数据到 Parcel 内存中
+        // 5. 调用 Parcel 的 marshall 获取之前打包的内存字节流
+        // 6. 把获取的内存字节流写入 FOS 中(flush FOS)
+        // 7. 最后调用下 FOS 的文件描述 sync，然 FOS 的内存数据同步到存储介质（文件）上去
+        // 8. 释放数据：回收 Parcel 数据，关闭输出流
+        FileOutputStream stream = new FileOutputStream(file);                                  
+        try {
+            Parcel out = Parcel.obtain();  
+            writeStatsToParcelFLOCK(out);  
+            stream.write(out.marshall());
+            // 用完了 Parcel 回收一下数据  
+            out.recycle();
+            stream.flush();
+        } finally {
+            FileUtils.sync(stream); 
+            // 关闭文件流       
+            stream.close();
+        }
+    }
+
+    private void writeStatsToParcelFLOCK(Parcel out) {
+        // 这里要访问数据了，加数据同步锁
+        synchronized (mStatsLock) {  
+            // 先写入版本号（检测数据有效性用的）      
+            out.writeInt(VERSION);         
+            Set<String> keys = mStats.keySet();
+            // 再写入有几条 PkgUsageStatsExtended 数据
+            out.writeInt(keys.size());
+            // 后面就循环的把每一条 PkgUsageStatsExtended 写入
+            for (String key : keys) {          
+                PkgUsageStatsExtended pus = mStats.get(key);
+                // 先写 pkg name
+                out.writeString(key);
+                // 然后调用 PkgUsageStatsExtended 的 Parcel 写入接口写数据
+                // PkgUsageStatsExtended 的写入接口倒回去看数据结构那的代码
+                pus.writeToParcel(out);    
+            }                 
+        }
+    }
+
+// ======================== FileUtils.java =========================
+
+    // 这里就获取了下 FOS 的文件描述符，然后调用对应的文件描述符接口
+    /*
+     * Perform an fsync on the given FileOutputStream.  The stream at this
+     * point must be flushed but not yet closed.
+     */
+    public static boolean sync(FileOutputStream stream) {
+        try {
+            if (stream != null) {          
+                stream.getFD().sync();         
+            }
+            return true;
+        } catch (IOException e) {      
+        }                     
+        return false;
+    }
+```
+
+下面是从文件中读数据的接口： 
+
+```java
+    private void readStatsFromFile() {
+        File newFile = mFile;
+        // 读写文件锁
+        synchronized (mFileLock) {     
+            try {
+                if (newFile.exists()) { 
+                    // 真正的读数据在下面这个函数中       
+                    readStatsFLOCK(newFile);       
+                } else {
+                    // 文件不存在就创建一个新的
+                    // Check for file limit before creating a new file
+                    // 检测下文件个数限制
+                    checkFileLimitFLOCK();         
+                    newFile.createNewFile();       
+                }
+            } catch (IOException e) {      
+                Slog.w(TAG,"Error : " + e + " reading data from file:" + newFile);
+            }
+        }
+    }
+       
+    private void readStatsFLOCK(File file) throws IOException {
+        // 从保存数据的文件中转载 Parcel 数据
+        Parcel in = getParcelForFile(file);
+        // 先读版本号（顺序要和前面写的一致）
+        int vers = in.readInt();       
+        // 如果数据版本号和当前的不一样的，认为该数据无效
+        if (vers != VERSION) {
+            Slog.w(TAG, "Usage stats version changed; dropping");
+            return;
+        }
+        // 读取 PkgUsageStatsExtended 的数量 
+        int N = in.readInt();
+        while (N > 0) {
+            N--;
+            // 读每一条 PkgUsageStatsExtended 的 pkg name
+            String pkgName = in.readString();
+            if (pkgName == null) {
+                break;
+            }
+            if (localLOGV) Slog.v(TAG, "Reading package #" + N + ": " + pkgName);
+            // 调用 PkgUsageStatsExtended 的 Parcelable 读接口填充数据
+            PkgUsageStatsExtended pus = new PkgUsageStatsExtended(in);
+            synchronized (mStatsLock) {
+                // 将填充好的 PkgUsageStatsExtended 保存到 USS 数据列表中
+                mStats.put(pkgName, pus);
+            }
+        }
+    }
+    
+    private Parcel getParcelForFile(File file) throws IOException {
+        // 这里可以和上面写对应可以学习怎么从文件中利用 Parcel 读数据：
+        // 1. 打开 File 对象
+        // 2. 从 File 中创建 java 输入流对象（FIS）
+        // 3. 从 FIS 中读出直接流到内存中（数据不多的可以一次性读完）
+        // 4. new Parcel 对象（同样利用 Parcel.obtain 会有缓存效果）
+        // 5. 把内存字节流传给 Parcel unmarshall 转载到 Parcel 中
+        // 6. 关闭 FIS
+        // 7. 把转载好数据的 Parcel 给 Parcelable 对象读数据
+        // 8. 释放数据：关闭输入流，回收 Parcel 数据
+        // 读这里好像没 recycle obtain 的 parcel，我觉得应该要 recycle 一下的，
+        // 虽然说 recycle 会把 parcel 的内存释放掉，但是读的时候应该都 copy 到对象自己
+        // 的数据里面来了吧，改天有空自己试一下这个东西
+        FileInputStream stream = new FileInputStream(file);
+        byte[] raw = readFully(stream);
+        Parcel in = Parcel.obtain();   
+        in.unmarshall(raw, 0, raw.length);
+        // 注意下把数据指针移到初始位置
+        in.setDataPosition(0);
+        stream.close();
+        return in;
+    }
+       
+    static byte[] readFully(FileInputStream stream) throws java.io.IOException {
+        // java 的 I/O 操作，没啥好讲的，自己看看就行
+        int pos = 0;
+        int avail = stream.available();
+        byte[] data = new byte[avail]; 
+        while (true) {
+            int amt = stream.read(data, pos, data.length-pos);
+            if (amt <= 0) {
+                return data;
+            }
+            pos += amt;
+            avail = stream.available();    
+            if (avail > data.length-pos) { 
+                byte[] newData = new byte[pos+avail]; 
+                System.arraycopy(data, 0, newData, 0, pos);
+                data = newData;                
+            }
+        }
+    }
+```
+
+然后我们看下文件数量的限制方法：
+
+```java
+... ...
+         
+    private static final int MAX_NUM_FILES = 5;
+
+... ...
+
+    private ArrayList<String> getUsageStatsFileListFLOCK() {
+        // 首先列出 /data/system/usagestats 目录下的所有文件列表
+        // Check if there are too many files in the system and delete older files
+        String fList[] = mDir.list();
+        if (fList == null) {
+            return null;
+        }
+        ArrayList<String> fileList = new ArrayList<String>();
+        for (String file : fList) {
+            // 不是 usage- 开头的文件忽略
+            if (!file.startsWith(FILE_PREFIX)) {
+                continue;
+            } 
+            // 把一些遗留的备份文件删掉  
+            if (file.endsWith(".bak")) {
+                (new File(mDir, file)).delete();
+                continue;
+            }
+            // 添加到文件列表
+            fileList.add(file); 
+        }
+        return fileList;
+    }
+
+    private void checkFileLimitFLOCK() {
+        // 收集 /data/system/usagestats 目录下的所有数据文件
+        // Get all usage stats output files
+        ArrayList<String> fileList = getUsageStatsFileListFLOCK();
+        if (fileList == null) {        
+            // Strange but we dont have to delete any thing
+            return;
+        }
+        int count = fileList.size(); 
+        // 没超过限制个数返回  
+        if (count <= MAX_NUM_FILES) {  
+            return;
+        }
+        // 按照最近日期排个序列
+        // Sort files
+        Collections.sort(fileList);    
+        count -= MAX_NUM_FILES;
+        // 把超出限制范围的文件删掉        
+        // Delete older files
+        for (int i = 0; i < count; i++) {
+            String fileName = fileList.get(i);
+            File file = new File(mDir, fileName);
+            Slog.i(TAG, "Deleting usage file : " + fileName);
+            file.delete();
+        }
+    }
+```
+
+看完上面的了保存和读取接口，然后我们最后把 USS 调用到的地方看一下（这里不贴代码了，直接说那几个地方调用到了，用 grep 很容易找的）：
+
+调用写（writeStatsToFile）的地方有：(调试的地方不算, true 代表强制写，false 使用保存策略)
+1. shutdown: true
+2. notePauseComponent: false
+3. noteLaunchTime: false
+
+调用读（readStatsFromFile）的地方有：
+1. UsageStatsService
+
+总结一下就能发现 USS 特性： 在收到 notePauseComponent 和 noteLaunchTime 的时候会激发保存动作，策略基本上是一天保存一次，一次保存为一个文件（以日期命名）。成功保存完之后，会把内存中的数据清零，所以一个文件中的数据差不多是一天统计的数据。但是上面在 USS 关闭（重启、关机 SystemServce 会调用各个 SS 的 shutdown 函数）的时候会强制写数据，然后在初始化的时候（构造函数）取当前日期的文件，如果有就去把这个文件中的数据转载到 mStats 中去（相当于读档）。这个操作能保证设备在还没用满一天的情况下重启、关机数据也能保存（正常的是要过了一天才会激发写文件操作的）。然后默认只会保留最近5天的数据，超过了就会删掉之前的。
+
+
+搞清楚了 USS 的保存数据的方法和策略，我们最后来看实际数据的情况，加深一下理解。下面这张图就是 USS 一天的数据（拿 xxd 转化为 16进制，用 vi 打开），然后对应下 dump 的数据：
+
+<pre>
+Date: 20150306
+  com.android.systemui: 1 times, 30961918 ms
+    com.android.systemui.usb.UsbStorageActivity: 1 starts, 250-500ms=1
+  com.bbk.studyos.launcher: 2 times, 8282 ms
+    com.bbk.studyos.launcher.activity.Launcher: 2 starts, 2000-3000ms=1
+</pre>
+
 ![](http://7u2hy4.com1.z0.glb.clouddn.com/android/Worknote-usagestats/usage-data.png)
+
+Binder 系列 Parcel 篇我们分析过 Parcel 就是一块内存自己来写，我们对着内存中的数据一个一个对照看一下。最开始写入的是版本号：
+
+```java
+// Current on-disk Parcel version
+private static final int VERSION = 1007;
+```
+
+0x0000 03ef（注意一下，我手上机子的 cpu 是小端格式的）正好是 1007，writeInt 前面说过是 4byte 的（绿色部分）。然后接下来是 PkgUsageStatsExtended 的个数，0x0000 0002 是2个，看 dump 的输出，果然是2个，同样是 WriteInt 4byte（深蓝色部分）。接下来就是第一个 PkgUsageStatsExtended 的 pkg name，是用 writeString 写的（红色的部分）。这里我们补充下 Parcel 的一些知识：
+
+```java
+// ======================== Parcel.java =========================
+
+    /*
+     * Write a string value into the parcel at the current dataPosition(),
+     * growing dataCapacity() if needed.
+     */
+    public final void writeString(String val) {
+        nativeWriteString(mNativePtr, val);
+    }
+
+// ======================== android_os_Parcel.cpp =========================
+
+static void android_os_Parcel_writeString(JNIEnv* env, jclass clazz, jint nativePtr, jstring val)
+{
+    Parcel* parcel = reinterpret_cast<Parcel*>(nativePtr);
+    if (parcel != NULL) {
+        status_t err = NO_MEMORY;
+        if (val) {
+            const jchar* str = env->GetStringCritical(val, 0); 
+            if (str) {
+                err = parcel->writeString16(str, env->GetStringLength(val));
+                env->ReleaseStringCritical(val, str);
+            }   
+        } else {
+            err = parcel->writeString16(NULL, 0); 
+        }   
+        if (err != NO_ERROR) {
+            signalExceptionForError(env, clazz, err);
+        }   
+    }
+}
+
+// ======================== Parcel.cpp ========================= 
+
+// 这里调用的是 writeString16 我之前分析的是 writeString8
+status_t Parcel::writeString16(const char16_t* str, size_t len) 
+{
+    if (str == NULL) return writeInt32(-1);
+    
+    // 和之前的 writeString8 一样，第一个位置是写字符串的长度
+    status_t err = writeInt32(len);
+    if (err == NO_ERROR) {
+        // 字符长度 x 一个字符所占的大小
+        // char16_t 看下面的定义是 2byte
+        len *= sizeof(char16_t);
+        // 注意看这里， len 还多加了一个字符的
+        uint8_t* data = (uint8_t*)writeInplace(len+sizeof(char16_t));
+        if (data) {
+            memcpy(data, str, len);
+            // 原来是拿来写 '/0' 结束符用的
+            *reinterpret_cast<char16_t*>(data+len) = 0; 
+            return NO_ERROR;
+        }
+        err = mError;
+    }
+    return err; 
+}
+
+String16 Parcel::readString16() const
+{
+    size_t len;
+    const char16_t* str = readString16Inplace(&len);
+    if (str) return String16(str, len);
+    ALOGE("Reading a NULL string not supported here.");
+    return String16();
+}
+
+const char16_t* Parcel::readString16Inplace(size_t* outLen) const
+{
+    int32_t size = readInt32();
+    // watch for potential int overflow from size+1
+    if (size >= 0 && size < INT32_MAX) {
+        *outLen = size;
+        // 果然读的地方也要多加1个字符
+        const char16_t* str = (const char16_t*)readInplace((size+1)*sizeof(char16_t));
+        if (str != NULL) {
+            return str;
+        }
+    }
+    *outLen = 0;
+    return NULL;
+}
+
+// ======================== Unicode.h ========================= 
+
+typedef uint32_t char32_t;
+typedef uint16_t char16_t;
+```
+
+看到上面 WriteString16 和 定义头文件的 Unicode 就能猜到 java 里面的 String 用的是 UCS-2（2byte 的unicode 编码，忘记了的去 [unicode 编码表](http://light3moon.com/2015/01/31/[转] unicode 编码表 "unicode 编码表") 看看）。
+
+好补充了上面的知识我们再接着看 pkg name。一开始长度： 0x0000 0014，20个字符，从 0x0063（"c" 的 UCS-2 码） 到红色最后一排那个 0x0069（"i" 的 UCS-2 码） 正好是 20 个（2byte x 20 = 40byte, 0x000000ch ~ 0x0000033h）。UCS-2 使用2个byte来代码一个码，如果是字母的就是 ACSII 的值，从右侧的显示也能看出是： com.android.systemui。但是这里稍微注意下，红色的部分，多个了2个 0x0000，第一个从前面 Parcel 的代码我们知道是 '/0' 字符串结束符。但是怎么还多了一个出来？还记得 Parcel 篇说过 Parcel 数据都会 4byte 对齐的么，如果不算后面那个 0x0000 的话，我们算算看原来的数据是多少： 4byte(1个 32bit int len) + 40byte(20个 16bit UCS-2 字符) + 2byte（1个 16bit UCS-2 结束符）= 46byte，46 % 4 = 2，所以最后还要补上 2byte 作为 4byte 对齐用的。这里结合实际终能稍微能明白点字节对齐了。
+
+
+补充完 Parcel 知识，继续往下看。倒回去看下 PkgUsageStatsExtended 的 writeToParcel 接口：
+
+黄色部分，  4byte（writeInt）， mLaunchTime（启动次数），0x0000 0001，1次
+淡蓝色部分，8byte（writeLong），mUsageTime（使用时长），0x0000 0000 01d8 70ef，30961918ms
+紫色部分，  4byte（writeInt）， TimeStats 的个数，0x0000 0001，1个
+
+然后后面就是循环写 TimeStats 了，和 PkgUsageStatsExtended 差不多一开始是 component name：红色部分，前面详细说了 pkg name 这里不多说了，照着前面的方法自己对照一下吧。然后就要看 TimeStats 的 writeToParcel 接口了：
+
+紫色部分，4byte（writeInt），count 总共启动次数，0x0000 0001，1次。然后后面红色的部分是 TimeStats 的那个 int[] times 的数组的数值，全都是 4byte（writeInt），一共10个：正好从 0x00000a8h ~ 0x00000cfh 40byte。然后第2个为1，去翻下前面那个数组的定义：第二时间段正好是 250-500ms的（第一个是 <250ms）。
+
+然后剩下的就是循环重复了的，有兴趣的自己往下读一下了。从我们自己分析文件中的二进制数据发现，是和 USS 中的数据对得上的。
+
+
+最后再说下前面说到 Parcel.obtain 带缓存效果是怎么回事，我们直接看代码：
+
+```java
+... ...
+                 
+    private static final int POOL_SIZE = 6;
+    private static final Parcel[] sOwnedPool = new Parcel[POOL_SIZE];
+    // pool 是 static 变量，每个进程中 Pacel 都有一个（6个元素的数组）
+    private static final Parcel[] sHolderPool = new Parcel[POOL_SIZE];
+
+... ...
+
+    static protected final Parcel obtain(int obj) { 
+        final Parcel[] pool = sHolderPool;
+        synchronized (pool) { 
+            Parcel p;
+            // 会在 pool 中找到一个不为 null 的元素，取出来，
+            // 然后先初始化一下大小，再把这个位置的元素设置为 null，表示已经被取走了
+            // 最后返回取出来的元素给调用者使用
+            for (int i=0; i<POOL_SIZE; i++) {
+                p = pool[i];
+                if (p != null) {               
+                    pool[i] = null;                
+                    if (DEBUG_RECYCLE) {           
+                        p.mStack = new RuntimeException();
+                    }
+                    p.init(obj);                   
+                    return p;
+                }
+            }
+        }
+        // 如果 pool 中都是空的，只好重新 new 一个出来了
+        return new Parcel(obj);        
+    }
+
+... ...
+
+    // 结合上面的 obtain 来看，这个 recycle 就是先把自己的内存释放掉，
+    // 然后在 pool 中找一个空位置，把自己放进去，如果 pool 满了的话（没人用）就不管了
+    /*
+     * Put a Parcel object back into the pool.  You must not touch
+     * the object after this call.
+     */
+    public final void recycle() {
+        if (DEBUG_RECYCLE) mStack = null;
+        // 释放自己占用的内存
+        freeBuffer();
+    
+        // 看样子 obtain 取不到 mOwnsNativeParcelObject 的 Parcel 的
+        final Parcel[] pool; 
+        if (mOwnsNativeParcelObject) {
+            pool = sOwnedPool;
+        } else {
+            mNativePtr = 0;
+            pool = sHolderPool;
+        }
+    
+        synchronized (pool) {
+            for (int i=0; i<POOL_SIZE; i++) {
+                if (pool[i] == null) {
+                    pool[i] = this;
+                    return;
+                }
+            }
+        }
+    }
+```
+
+从这里我们可以看出，在使用 Parcel 的时候，尽量调用 Parcel.obtain 来获取 Parcel 来使用，使用完之后要调用 recycle 把不用的 Parcel 还到缓存池中去，以便下次使用。这样能减少 GC 的概率。对了前面 Parcel 还有2个函数没说（java 中的直接挂 jni 的马甲，直接上 jni 代码）：
+
+```cpp
+// ======================== android_os_Parcel.cpp ========================= 
+
+static jbyteArray android_os_Parcel_marshall(JNIEnv* env, jclass clazz, jint nativePtr)
+{
+    Parcel* parcel = reinterpret_cast<Parcel*>(nativePtr);
+    if (parcel == NULL) {
+       return NULL;
+    }
+
+    // do not marshall if there are binder objects in the parcel
+    if (parcel->objectsCount())
+    {
+        jniThrowException(env, "java/lang/RuntimeException", "Tried to marshall a Parcel that contained Binder objects.");
+        return NULL;
+    }
+
+    // new 了一个 parcel 数据大小的 java byte 数组
+    jbyteArray ret = env->NewByteArray(parcel->dataSize());
+
+    if (ret != NULL)
+    {
+        jbyte* array = (jbyte*)env->GetPrimitiveArrayCritical(ret, 0);
+        if (array != NULL)
+        {
+            // 把 parcel 中的内存 copy 到刚刚 new 出来的 byte 数组中
+            memcpy(array, parcel->data(), parcel->dataSize());
+            env->ReleasePrimitiveArrayCritical(ret, array, 0);
+        }
+    }
+
+    return ret;
+}
+
+static void android_os_Parcel_unmarshall(JNIEnv* env, jclass clazz, jint nativePtr,
+                                         jbyteArray data, jint offset, jint length)
+{
+    Parcel* parcel = reinterpret_cast<Parcel*>(nativePtr);
+    if (parcel == NULL || length < 0) {
+       return;
+    }
+
+    // 从 java byte 数组中获取指针
+    jbyte* array = (jbyte*)env->GetPrimitiveArrayCritical(data, 0);
+    if (array)
+    {
+        parcel->setDataSize(length);   
+        parcel->setDataPosition(0);    
+
+        // 让 parcel 分配指定的内存空间
+        void* raw = parcel->writeInplace(length);
+        // 把 java byte 数组 copy 到 parcel 的内存中
+        memcpy(raw, (array + offset), length);
+
+        env->ReleasePrimitiveArrayCritical(data, array, 0);
+    }
+}
+```
+
+marshall 是从 Parcel 中获取打包好的直接流数据；unmarshall 正好反过来，把指定的字节流写入到 Parcel 中。
 
 ## 改造
 
 ### 方案
 
+前面说了那么多，大概弄清楚 USS 统计了什么数据，如果保存的。从上面来看，如果要利用 USS 来进行应用时长统计，只要做一点点修改就行了。首先 USS 只会保存最近5天的数据，可以自己在 framework 中写一个 Provider 把 USS 的数据全部存到数据库中。我是在只建了一张表，就2个字段，一个是 long 时间，一个是 blob USS 每一个保存文件的对应的二进制数据（也就是 Parcel 中的内存结构）。这样做出于下面的的考虑：
+
+1. 数据量不会太大，一天一个文件，也就是说一天一条记录，1000 条够3年多了。一般设备上安装的应用也不会特别多，所以对应每一条的 blob 数据也不会太大。
+2. 使用数据库方便查询，对于生成一些指定范围时间范围内的数据报表很有帮助，例如说最近一个星期、最近1个月的使用情况。
+3. 保存的是 USS 的原始数据，如果需要 USS 增加什么新数据的话，数据库不需要升级表字段。
+4. Provider 接口方便多个进程调用。
+5. 因为相当于是把 USS 生成的文件保存到数据库中了，所以解析速度会稍微慢一点，但是对于查看统计应用时长的需要，转个圈圈加载一下下也没啥关系。
+
+但是需要注意一点：从上面的分析知道 USS 保存到文件中的数据并不是当前的实时数据，所以保存在数据库中的也不是实时数据，也就说从 Provider 读到的也不是实时数据。实时数据在 USS 的内存中（mStats），所以如果要判断当前某些应用使用多长时间（应用监控功能），需要在 USS 拉接口，去取 mStats 的数据。
+
 ### 实现
+
+上面把方案说了一下，实现的话这里简单说一下就行了，不贴代码了（这篇已经够长了，而且改造挺简单的）。新加一个 Provider 的话，可以在 packages/providers 下面新建一个 UsageStatsProvider 的模块，Android.mk 和 ContentProvider 的写法，可以照着同目录的几个 providers 抄一下。然后如果要随系统发布的话，记得把你新加的模块加到编译脚本中。然后去 frameworks/base/core/java/android/provider 下面加一个 UsageStats.java 的文件，把数据库的表字段、对外的 Provider URL 定义好（拉接口）。然后数据保存就弄得差不多了。
+
+最后就是要让 USS 保存文件的时候调用下你写的 Provider 的接口，把文件顺带写到数据中。通过上面的分析，就在 writeToFileParcel 成功写入那加就行了，还有现成的 blob 数据（Parcel 的打包数据）。
+
+然后 USS 拉接口的就要具体业务了，这里不多说了。
 
 ## 总结
 
-未完待续 ... ...
+终于说完了。其实 USS 还有一些东西我没管（例如那个 resume 的历史记录 xml 文件），以后用到再说。还有顺带分析的 AMS 那里也是还有很多种情况没分析到的。还有这里只说了 startActivity，对应的 finishActivity 还没说，以后再说了。还有以后顺带把 Handler、Looper、MessageQueue 也整理一篇。
+
 
