@@ -149,4 +149,23 @@ tags: [android, install]
 
 至此，android开发环境搭建完毕，有问题请留言。在这里要注意，我这里只是下载了android sdk r4升级工具，没有下载具体的SDK，而是通过在Eclipse里面的Android Sdk管理工具升级的，你也可以直接下载具体的SDK版本，如: Android sdk 2.1 r1 上面有这个的下载链接，但我任务用升级工具更好。
 
+---
+
+## 更新
+
+上面转载的可以统统不用管，忘记步骤的去官网看下文档就行： [Eclipse with ADT](http://developer.android.com/tools/help/adt.html "Eclipse with ADT") (请自备 vpn，啥百度教程都抵不上官方的)。
+
+### java 版本过低问题
+
+最近更新了 5.1 的 sdk，挂 vpn 下载后，把 ADT 也更新到最新的了，但是打开 eclipse 发现报这个错误： 
+
+<pre>
+"Loading data for Android 5.0" has encountered a problem.
+
+Parsing Data for android-21 failed
+unsupported major.minor version 51.0
+</pre>
+
+刚开始没注意，但是发现用 5.0 的 sdk 编任何工程都出错，换成 4.4 的就能编过了，刚开始还没搞明白咋回事，后面 google 才知道是 java 的版本太低了（当时装的是 jdk6），51.0 要至少 jdk7 以上的，把 jdk6 换成 jdk7 以上的就好了。重新装 jdk 有“困难”的看这里： [ubuntu 安装 jdk](http://light3moon.com/2015/01/19/ubuntu 安装 jdk "ubuntu 安装 jdk") 
+
 

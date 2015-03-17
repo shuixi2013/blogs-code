@@ -1,4 +1,4 @@
-title: ubuntu 14.04 安装 winusb
+title: ubuntu 安装 winusb
 date: 2015-01-19 10:25:16
 updated: 2015-01-19 10:25:16
 categories: [Linux]
