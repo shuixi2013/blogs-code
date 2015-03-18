@@ -6,6 +6,7 @@ tags: [android]
 ---
 
 ## 如何在 Android.mk 中添加自定义库
+
 在编译 android 模块的时候，有时候想自己添加一些自己的东西，或者是说链接一些额外的库（例如说自己写的）。这个时候需要去修改 Android.mk 文件。这里以 android 中简单的 toolbox 模块为例说明。例如说要在 toolbox 中加一个自己的命令，除了编写相应的 .c 文件文件外（例如 myhello.c），Android.mk 中要这么改：
 
 ```cpp
@@ -37,6 +38,7 @@ LOCAL_LDFLAGS = $(OLD_LDFLAGS) -L/usr/lib -lX11
 ```
 
 ## 编译 framework 自动增加自定义资源
+
 在定制 framework 的一些模块的时候（例如 framework-res、SystemUI、Launcher 等），有些时候需要增加一些自己的资源（图片、xml 等）。官方预留了一个路径： device/xx(oem)/xx(product)/overlay 。在这个下面可以覆盖一些原有的资源文件（官方的原意应该是主要给 OEM 改一些 config 的）。我们可以把自己的新增的资源文件加如到自己的模块对应的路径下。不过对于新增的资源，需要在 xml 中声明：。
 
 <pre config="brush:bash;toolbar:false;">
@@ -49,5 +51,16 @@ add-resource type="xx" name="xx"
 <pre config="brush:bash;toolbar:false;">
 LOCAL_AAPT_FLAGS := --auto-add-overlay
 </pre>
+
+## 增加 overlay 文件夹
+
+为了方便 OEM 定制， android 中在很多个地方可以增加 overlay 文件夹，覆盖一些 xml 中的定义和替换资源文件（图片等）。其中一个地方就是 /device/vendor/product 下面，例如说 asus 代工的 nexus7 的可以是 /device/asus/flo/overlay。但是新增文件夹还需要告诉编译系统 overlay 的路径是什么。在 /device/vendor/product 下面自定义的 mk（例如说 BoardConfig.mk，在哪个 mk 文件里加可以看自己的具体情况） 文件中加上一句：
+
+```xml
+#override 
+DEVICE_PACKAGE_OVERLAYS := device/$(vendor)/$(TARGET_PRODUCT)/overlay
+```
+
+配合上面那个自动增加自定义资源的更好用 ^_^ 
 
 
