@@ -159,6 +159,28 @@ git push origin :test
 ## 撤销 add 的文件
 使用 git reset xx ，撤销 add 的问题，特别适用于使用 add --all 但是发现多添加了文件。注意这个是 add 但是还没 commit 的时候。
 
-# 撤销 commit
+## 撤销 commit
 如果只是本地 commit 还没 push 到服务器，可以使用 git reset --hard xx（回到某个提交，xx 可以是 commit 的 id）。如果 push 到服务器的，要稍微麻烦点。但是最后每次提交前确定一下，这种操作还是少一点比较好。
+
+## 合并其它仓库的 commit
+有些时候，我们需要 merge 其它仓库的 commit 到自己的仓库，这种情况经常出现在基于某些开源的仓库自己定制，然后更新开源仓库的版本。git 提供了很好的功能：
+
+<pre config="brush:bash;toolbar:false;">
+# 添加其它仓库的源到自己的仓库
+# other 是 path, 可以自己定义的，后面的 url 是其它仓库的地址
+git remote add other git@github.com:mingming-killer/K7Utils.git
+
+# pull 刚刚添加的仓库
+git fetch other
+
+# 合并其它仓库的指定分支到自己的仓库
+# 这里的 merge 就和合并自己的仓库的 commit 一样，如果有冲突的话需要解决冲突
+# 合并完成后，就可以 push 合并之后的结果到自己的远程仓库中去了
+git merge other/master
+</pre>
+
+用 git 的这个功能能够很方便的更新其它仓库的代码，不需要人工搬运（如果没有冲突的话），并且还会保留合并仓库的 log 信息。
+
+
+
 

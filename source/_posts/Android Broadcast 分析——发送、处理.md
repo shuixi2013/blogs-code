@@ -1,6 +1,6 @@
 title: Android Broadcast 分析——发送、处理
 date: 2015-01-22 10:15:16
-updated: 2015-02-05 10:15:16
+updated: 2016-03-31 10:33:16
 categories: [Android Framework]
 tags: [android]
 ---
