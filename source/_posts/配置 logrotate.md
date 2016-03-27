@@ -176,3 +176,33 @@ logrotate 的配置，都是一个 log 的文件路径（这个路径就是你�
 }
 ```
 
+## 注意问题
+
+最后要说下 logrotate 配置的一些问题。虽然 logrotate 可以配置成按天、周、月和文件大小进行日志转储。但是 logrotate 也是有一定限制的，这里稍微说下 logrotate 的实现原理。其实 logrotate 并不是一个守护进程，而是通过 linux 的定时任务机制 cron 来实现的（关于 cron 的用法，可以去网上找下资料）。在 /etc/cron.daily 有一个 logrotate 文件，是在 logrotate 安装的时候创建的，这个就是定时执行 logrotate 轮询脚本了 。 /etc/crontab 是 cron 的配置文件：
+
+```bash
+# /etc/crontab: system-wide crontab
+# Unlike any other crontab you don't have to run the `crontab'
+# command to install the new version when you edit this file
+# and files in /etc/cron.d. These files also have username fields,
+# that none of the other crontabs do.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# m h dom mon dow user  command
+17 *    * * *   root    cd / && run-parts --report /etc/cron.hourly
+25 6    * * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+47 6    * * 7   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+52 6    1 * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
+#
+```
+
+可以看到默认系统是在每天 6：25 的时候执行 logrotate 的轮询的。也就是说其实你配置了按文件大小进行转储，也要等到每天 logrotate 出发轮询才会生效。当然既然是通过 cron 来实现的，也可以自己修改配置文件，调高 logrotate 轮询的间隔（例如一天2次之类的）。
+
+
+
+
+
+
+
