@@ -425,7 +425,7 @@ public class MyApp extends Application {
 
 现在说下，默认 gradle 的路径要怎么放。gradle 默认的代码路径是放在工程目录的 src 文件夹下面。在 src 下面可以分不同的产品放不同的文件夹，默认的是 main 文件夹，下面放 AndroidManifest.xml, project.properties, jniLibs（so 库放这里）, res（.R 资源放这）, assets（assets 资源放这），java（java 代码放这里，这里就可以是 src/xx/xx/xx.java 了），jni（native 代码放这里）。
 
-然后不同的产品根据产品名字和编译类型可以放置不同的文件夹，然后在不同的文件夹下可以定制这个产品版本的特性。例如说放额外的 AndroidManifest.xml，放不同的 res 文件。但是要**注意一点**：这里不同的产品定制的代码，首先还是会采用 main 里面的，然后再把产品定制的**合并**过去。注意是合并，什么叫合并，举个例子： main 里面默认的 AndroidManifest.xml 中的一个叫 BUILD_TYPE 的 meta-data 字段是 release，那如果我在 apk1Debug 中的 AndroidManifest.xml 中把这个 BUILD_TYPE 的 meta-data 写成了 debug，那么编译的 apk1 的 debug 版的 AndroidManifest.xml 的 BUILD_TYPE 就是 debug 而不是 release。所以说不同的产品里面只要定制不同的部分就行了，不用把所有的 AndroidManifest.xml 都重写一篇。关于更多的 AndroidManifest.xml 的合并可以看下 [官方的说明](http://developer.android.com/tools/building/manifest-merge.html "官方的说明")。要注意一点，要覆盖默认的 meta-data 的值，需要加一个 tools:replace 的声明，像下面这样：
+然后不同的产品根据产品名字和编译类型可以放置不同的文件夹，然后在不同的文件夹下可以定制这个产品版本的特性。例如说放额外的 AndroidManifest.xml，放不同的 res 文件。但是要**注意一点**：这里不同的产品定制的代码，首先还是会采用 main 里面的，然后再把产品定制的**合并**过去。注意是合并，什么叫合并，举个例子： main 里面默认的 AndroidManifest.xml 中的一个叫 BUILD_TYPE 的 meta-data 字段是 release，那如果我在 apk1Debug 中的 AndroidManifest.xml 中把这个 BUILD_TYPE 的 meta-data 写成了 debug，那么编译的 apk1 的 debug 版的 AndroidManifest.xml 的 BUILD_TYPE 就是 debug 而不是 release。所以说不同的产品里面只要定制不同的部分就行了，不用把所有的 AndroidManifest.xml 都重写一篇。关于更多的 AndroidManifest.xml 的合并可以看下 [官方合并说明](http://developer.android.com/tools/building/manifest-merge.html "官方合并说明")。要注意一点，要覆盖默认的 meta-data 的值，需要加一个 tools:replace 的声明，像下面这样：
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -602,5 +602,42 @@ aapk2 的 release版 会使用这个文件下的配置
 ## 小结
 
 所以看不同的使用场景，应用不同的实现方式。并没有说哪一种要好过另一种，这就叫工具是死的，人是活的。感觉 gradle 这种定制不同产品的方式，颇有当年 C/C++ 预编译命令的味道。
+
+## 附录：AndroidManifest 能 override 的属性
+
+稍微记录一下：
+
+### minSdkVersion
+
+其实好像 module 的 AndroidManifest 可以不指定 minSdkVersion, targetSdkVersion 和 versionCode, versionName 的。但是有一些还是已经指定了，如果 module 指定了 minSdkVersion ，那么 app 的 minSdkVersion 一定不能大于 moudle 的，否则就会报错。你可能会说确实应该要这样，但是有些时候由于某些蛋疼的原因，其实 module 的 minSdkVersion 并不是真正使用了（就是说实际上这个 module 能在更低的 api level 上跑的，但是就是偏偏写了一个大的 minSdkVersion）。所以有些我们想只以 app AndroidManifest 中指定的 minSdkVersion 为准，忽略 module 中指定的 minSdkVersion。这个是可以做到的，通过一个 **tools:overrideLibrary** 属性指定：
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.heyemoji.emojiup"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="17" 
+        tools:overrideLibrary="android.support.v4, com.keyboard.common.utilsmodule"/>
+
+... ... 
+
+</manifest>
+```
+
+例如说，上面这个就是覆盖了 module： android.support.v4 和 com.keyboard.common.utilsmodule 中指定的 minSdkVersion （注意上面写的 module 的 pakcageName）。具体的可以看上面说的 [官方合并说明](http://developer.android.com/tools/building/manifest-merge.html "官方合并说明") 
+
+
+## 附录：关于 Flavors 的问题
+
+gradle 是可以定义不同的 Flavors，app 和 module 都可以，但是我强烈建议只在 app 中定义。如果你在 module 里分了 Flavors，在编译 app 的时候敲 task 确实能看到多了几个 Flavors 的 task 出来，但是其实你如果 build module 的 Flavors 是无法打包 app 出来的，但是如果直接 build，module 又无法根据 Flavors 走不同的分支。当然有可能是我自己还没学会怎么整，但是我还是建议只在 app 使用 Flavors，如果由于某些特殊原因，代码的不同是在 module 里面的，其实也可以绕到 app 中去，在 app 定义 Flavors，然后 module 抽出大多数相同的一部分变成一个 module，然后根据不同的 Flavors 建几个分支 module，然后在 app 中不同的 Flavors 引用不同的分支 module 就行了（分支 module 都引用抽出来的那个大 module）。
+
+还有导入了 idea（IDE）后也是可以编译不同的 Flavors 的，在 idea 的左边的有一个 Build Variants 的选项，可以选择要编译的 Flavors 的：
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/gradle-custom-flavors/ide_build_flavors.jpg)
+
+
 
 
