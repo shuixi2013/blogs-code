@@ -181,6 +181,15 @@ git merge other/master
 
 用 git 的这个功能能够很方便的更新其它仓库的代码，不需要人工搬运（如果没有冲突的话），并且还会保留合并仓库的 log 信息。
 
+## push 其它仓库
+上面的的是可以合并其它仓库。如果要更换 git 服务器的话，还可以直接把整个原来的仓库 push 到新服务器去，提交信息也都还在的：
+
+1. 先在新服务器创建一个裸仓库
+2. 然后在原来仓库上使用 git remote add other git@github.com:mingming-killer/K7Utils.git 命令添加远程仓库地址
+3. 然后切到你要 push 的分支，直接 git push other branch 就可以 push 了。当然最后是裸仓库 push 或者是远程仓库还没修改的，不然有冲突是无法 push 的。
+
+
+
 
 
 
