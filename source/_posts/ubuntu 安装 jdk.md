@@ -71,6 +71,8 @@ java in your current PATH
 
 这就好办了么，去 eclipse 目录下（上面那个 /home/mingming/eclipse 就是我 eclipse 的目录），创建一个 jre 的软件链接指向 /user/java/default 就行了。
 
+可以通过 android source 的官网装 open-jdk，其实不用 jdk-8，jdk-7 就可以： sudo apt-get install openjdk-7-jdk
+
 
 
 
