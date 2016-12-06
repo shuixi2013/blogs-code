@@ -23,9 +23,10 @@ tags: [android]
 
 在这个文件夹下系统会创建一个 cgroup.procs 的文件，把从这个 16553 启动的所有进程记录在这个文件内。我尝试过的启动方式有：
 
-a. java 层: Runtime.getRuntime().exec("command")
+**a. java 层**: 
+Runtime.getRuntime().exec("command")
 
-b. native 层:
+**b. native 层**:
   (1). 通过 shell 启动
   (2). fork
   (3). popen
@@ -280,10 +281,12 @@ fg-service 的好处有下面几个：
 
 **1**. 在 oom 中回收等级更加低（framework/base/services/core/java/com/android/server/am/ProcessList.java）：
 
+```java
     // This is a process only hosting components that are perceptible to the
     // user, and we really want to avoid killing them, but they are not
     // immediately visible. An example is background music playback.
     static final int PERCEPTIBLE_APP_ADJ = 2;
+```
 
 数值越低，就越不容易被回收，am 是根据从高到低回收的。
 
@@ -497,9 +500,9 @@ fg-service 的好处有下面几个：
 
 <pre>
 public final void startForeground (int id, Notification notification)  Added in API level 5
+</pre>
 
 Make this service run in the foreground, supplying the ongoing notification to be shown to the user while in this state. By default services are background, meaning that if the system needs to kill them to reclaim more memory (such as to display a large page in a web browser), they can be killed without too much harm. You can set this flag if killing your service would be disruptive to the user, such as if your service is performing background music playback, so the user would notice if their music stopped playing. 
-</pre>
 
 官方的设计思路是类似于后台的音乐播放服务，下载服务，是当前用户相关的服务，比较重要，不应该那么容易被杀死。怪不得某些提示用户说，如果要正常使用某些功能，就需要在通知栏上显示一条信息，原来是为了成为 fg-service 让应用在后台存活的时间更长。am 的一些策略对于我们以后的一些优化感觉也比较有用，以后哪位兄弟感兴趣可以一起研究一下。
 
