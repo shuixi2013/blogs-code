@@ -346,6 +346,21 @@ Uptime: 172539344 Realtime: 2419583224
 
 ```
 
+### 导入泄漏的 Bitmap
+
+使用 mat 一般发现最大的泄漏都是 Bitmap，例如：
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/oom-note/mat_5.png)
+
+除了上面的说的分析 object 引用链，一般我们都想把 Bitmap 导出来看一下到底是哪些图片被持有，无法释放，这样就很直观了。在 mat 中是可以倒出来的。找到泄漏的 Bitmap 对象，其中有一个成员变量是 **mBuffer**（pixel datas），右键然后 --> Copy --> Save Value To File，选择保存路径，保存的文件后缀名为 .data ，同时注意记住 Bitmap 的 mWidth 和 mHeight ，导出需要用到的： 
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/oom-note/mat_6.png)
+
+在 linux 上可以使用 **GIMP** 打开刚刚导出的 .data 文件（window，mac 我就不知道用什么软件可以打开了，应该支持 raw 格式的都可以吧），然后填写正确的参数： Width，Height，Image Type 。 Width，Height 刚刚在 mat 里可以看得到。至于 Image Type，一般 Bitmap 是 png 的就选 RGB Alpha，是 jpeg 的就选 RGB （或者 RGB565）。你要说你怎么知道是什么格式的，每一个都试一下，能正确显示图片就算对了。参数设置正确后，就能看到导出的图片了：
+
+![](http://7u2hy4.com1.z0.glb.clouddn.com/android/oom-note/mat_dump_image.png)
+
+
 ## 总结
 
 总结一下，android 应用中内存泄漏其实就是对象生命周期的问题，要想避免内存泄漏问题，首先写代码的人从意识上就要保留有**资源什么时候加载，什么时候释放**的意识。保持有这个意识才会去注意到会有内存泄漏的问题，这里给出几个写 android 代码的建议：
