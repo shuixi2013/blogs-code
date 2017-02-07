@@ -1,6 +1,6 @@
 title: Android Binder 分析——内存管理
 date: 2015-01-28 21:14:16
-updated: 2016-03-31 10:27:16
+updated: 2017-02-07 21:47:48
 categories: [Android Framework]
 tags: [android]
 ---

@@ -1,6 +1,6 @@
 title: Android Binder 分析——普通服务 Binder 对象的传递
 date: 2015-01-28 21:33:16
-updated: 2016-03-31 10:25:16
+updated: 2017-02-07 21:47:46
 categories: [Android Framework]
 tags: [android]
 ---

@@ -1,6 +1,6 @@
 title: Android Binder 分析——原理
 date: 2015-01-28 20:17:16
-updated: 2016-03-31 10:31:16
+updated: 2017-02-07 21:47:52
 categories: [Android Framework]
 tags: [android]
 ---

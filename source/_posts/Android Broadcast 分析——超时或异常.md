@@ -1,6 +1,6 @@
 title: Android Broadcast 分析——超时或异常
 date: 2015-01-22 10:17:16
-updated: 2016-03-31 10:32:16
+updated: 2017-02-07 21:47:53
 categories: [Android Framework]
 tags: [android]
 ---

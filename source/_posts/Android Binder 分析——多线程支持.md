@@ -1,6 +1,6 @@
 title: Android Binder 分析——多线程支持
 date: 2015-01-28 21:42:16
-updated: 2016-03-31 10:24:16
+updated: 2017-02-07 21:47:45
 categories: [Android Framework]
 tags: [android]
 ---

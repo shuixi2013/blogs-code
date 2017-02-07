@@ -1,6 +1,6 @@
 title: 工作小笔记——提升 Application 存活概率
 date: 2016-12-06 16:37:16
-updated: 2016-12-06 16:37:16
+updated: 2017-02-07 21:47:57
 categories: [Android Framework]
 tags: [android]
 ---
